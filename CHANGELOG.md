@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Test environment: `jsdom` moved from 26 to 30 (devDependency only). jsdom 26
+  pulled in `whatwg-encoding`, which is deprecated upstream and printed a
+  deprecation warning on every `npm ci`. Nothing in the published package
+  changes. **Consumer action: none.**
+
 ## [0.1.0] - 2026-11-01
 
 First release. **What you must do:** install it beside `react` 19 and
