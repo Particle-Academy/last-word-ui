@@ -1,0 +1,4 @@
+fonts/*.ttf binary
+fonts/OFL.txt -text
+fonts/NOTICE -text
+tests/fixtures/viewer-agreement.json text eol=lf

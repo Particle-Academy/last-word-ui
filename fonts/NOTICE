@@ -1,0 +1,24 @@
+The fonts in this directory are Carlito, by Lukasz Dziedzic (tyPoland), a
+font metric-compatible with Calibri. They are NOT covered by this package's
+MIT licence: they are licensed under the SIL Open Font License, Version 1.1,
+whose full text is in OFL.txt beside this file.
+
+  Copyright 2013 The Carlito Project Authors (https://github.com/googlefonts/carlito),
+  with Reserved Font Name "Carlito".
+
+Files, shipped UNMODIFIED (byte-identical to upstream):
+
+  Carlito-Regular.ttf     sha256 f6418f708baede9789daef5d458c0f53d2a888af9820e8062934e504fedc6595
+  Carlito-Bold.ttf        sha256 bb5d20f79b82599ec72983597437373a80f2d2085fa91fc144fd74e876a594db
+  Carlito-Italic.ttf      sha256 0b019225e58d702bfedcbd35c21696769f8ee115cb6343f84c2f240312450d1c
+  Carlito-BoldItalic.ttf  sha256 b32928186c119599e03ca6a1ffc680fdcb7fac95772f4b95d989cf6cd3861517
+  OFL.txt                 sha256 58402f82a7c332a700294988fe7554fbb0a63a8d27ccc1ee3bbc640311990a00
+
+Source: https://github.com/googlefonts/carlito, commit
+3a810cab78ebd6e2e4eed42af9e8453c4f9b850a (Carlito Version 1.104, 2023-03-09),
+directory fonts/ttf. The same files, as the same git blobs, are what Google
+Fonts serves from google/fonts ofl/carlito.
+
+The viewer declares them under the family name "LW Carlito" in its own
+@font-face rules. The font files themselves, including their internal names,
+are unchanged.

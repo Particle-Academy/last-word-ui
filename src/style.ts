@@ -45,12 +45,46 @@ const FALLBACKS: Record<string, string> = {
   consolas: '"Liberation Mono", Menlo, monospace',
 };
 
-/** A font-family stack. The name is untrusted, so it is reduced to safe characters and quoted. */
+/** The package-unique family the bundled Carlito is declared under (`fonts.ts`). */
+export const CARLITO_FAMILY = "LW Carlito";
+
+/**
+ * A font-family stack. The name is untrusted, so it is reduced to safe
+ * characters and quoted.
+ *
+ * Calibri, and text with no font at all, draws in the BUNDLED Carlito first:
+ * it is metric-compatible with Calibri and identical on every machine, so the
+ * page count is too. Every other font keeps the stack it always had, and its
+ * line breaks still depend on what the machine has installed.
+ */
 export function fontStack(name: unknown): string {
   const clean = typeof name === "string" ? name.replace(/[^A-Za-z0-9 _-]/g, "").trim() : "";
   const font = clean === "" ? DEFAULT_FONT : clean;
   const fallback = FALLBACKS[font.toLowerCase()] ?? 'Carlito, "Segoe UI", Arial, sans-serif';
-  return `"${font}", ${fallback}`;
+  const first = font.toLowerCase() === "calibri" ? `"${CARLITO_FAMILY}", ` : "";
+  return `${first}"${font}", ${fallback}`;
+}
+
+/**
+ * The typography every page and the measuring copy share.
+ *
+ * Kerning and ligatures are OFF, as they are in Word by default (no `w:kern`,
+ * no `w14:ligatures`): a line is then exactly the sum of its glyph advances,
+ * which is what lets a server-side estimate (last-word `layout()`) agree with
+ * this viewer. `geometricPrecision` asks for unhinted advances where a
+ * platform would otherwise round them.
+ */
+export function typography(defaultFont: unknown, size: number): CSSProperties {
+  return {
+    fontFamily: fontStack(defaultFont),
+    fontSize: pt(size),
+    lineHeight: SINGLE_LINE,
+    color: "#000000",
+    textAlign: "left",
+    fontKerning: "none",
+    fontVariantLigatures: "none",
+    textRendering: "geometricPrecision",
+  };
 }
 
 export const MONO = fontStack("Consolas");

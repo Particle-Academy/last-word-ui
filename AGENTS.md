@@ -16,7 +16,11 @@ bands.ts        which header/footer each page draws (default / first / even), bo
 fields.ts       band field tokens and the Word date-time picture formatter (pure)
 footnotes.ts    numbering, keyed by Run identity
 table-grid.ts   HTML-style spans -> grid columns, joinPrevious, header rows
-style.ts        pt helpers, Word's writer defaults, CSS sanitising
+style.ts        pt helpers, Word's writer defaults, CSS sanitising, typography()
+fonts.ts        the bundled Carlito: faces, their sha256, @font-face CSS, carlitoFaces(doc)
+font-urls.ts    new URL("../fonts/...", import.meta.url) for the injected @font-face
+fonts/          (package root) Carlito 1.104 TTFs, UNMODIFIED, with OFL.txt and NOTICE
+demo/agreement  the harness that records the viewer goldens for last-word's layout()
 ```
 
 ## Invariants
@@ -57,7 +61,26 @@ style.ts        pt helpers, Word's writer defaults, CSS sanitising
   0.5pt single borders, and a band at 9pt in `#6B7280`. They live in `style.ts`
   and `render.tsx`.
 - `src/styles.css` and `src/viewer-css.ts` hold the same rules
-  (`styles.test.ts` checks this).
+  (`styles.test.ts` checks this), plus the `@font-face` rules in `styles.css`.
+- **Calibri and default text is the bundled Carlito, and only that is
+  deterministic.** `fontStack()` puts `"LW Carlito"` first for Calibri or no
+  font; kerning and ligatures are off (`typography()`), so a line is the sum of
+  its advances. The fonts ship byte-for-byte as upstream (`fonts.test.ts` pins
+  each sha256): never subset, convert or re-hint them. `fonts/` sits at the
+  package root so `../fonts/` is right from `src/` and `dist/`; tsup marks it
+  external so `dist/` never carries a second, renamed copy.
+- **Nothing is measured before the font loads.** `DocViewer` waits on
+  `document.fonts.load()` for the faces `carlitoFaces(doc)` lists (timeout
+  `FONT_LOAD_TIMEOUT_MS`) and reports `font` in `onLayout`. A layout in the
+  fallback must never be reported as if it were the real one.
+- **last-word's PHP `Agent::layout()` mirrors this package** (its
+  `src/Layout/`: `BlockMeasurer` = render.tsx + measure.ts, `Packer` =
+  paginate.ts). A change to a renderer's box model, a default, a measuring rule
+  or the packer moves page counts there too. After any such change, re-run the
+  harness (`demo/agreement.html`, `window.lwRender(doc)`), regenerate
+  `tests/fixtures/viewer-agreement.json`, copy the same bytes to last-word and
+  update both hashes; a disagreement is then a bug on one side, never a
+  fixture to edit by hand.
 
 ## Types
 
@@ -70,6 +93,15 @@ devDependency only.
 
 ## Traps
 
+- On a machine with Calibri installed, removing the bundled font changes
+  nothing measurable: Calibri 6.27 and Carlito 1.104 have the same advances
+  and kerning is off. A check that "the font matters" has to simulate a
+  machine WITHOUT Calibri (Segoe UI or Arial first), or it passes vacuously.
+- A line box is NOT size x line-height rounded one way: measured in Chromium,
+  9pt at the default spacing is a floor (969/64 px for 969.70) and 8pt a
+  ceiling (862 for 861.95). No rounding rule tried reproduced all 245 measured
+  cases, so last-word carries them as a measured table; re-measure if Blink's
+  line layout changes.
 - jsdom has no layout: every height is 0, so jsdom tests cover structure,
   styling and handles, and the packer tests cover breaks. Real breaks need the
   browser (`npm run demo`).

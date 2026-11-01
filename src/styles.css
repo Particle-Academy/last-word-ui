@@ -1,6 +1,13 @@
 /* @particle-academy/last-word-ui -- import this ONLY under a strict CSP, with
    <DocViewer injectStyles={false} />. By default the viewer renders the same
-   rules itself. Kept identical to src/viewer-css.ts. */
+   rules itself. Kept identical to src/viewer-css.ts, plus the bundled Carlito
+   (fonts.ts): the URLs are relative to this file, so the bundler that imports
+   it emits the font files too. Allow them in font-src ('self' covers it when
+   they are served from your own origin). */
+@font-face { font-family: "LW Carlito"; font-weight: 400; font-style: normal; font-display: swap; src: url("../fonts/Carlito-Regular.ttf") format("truetype"); }
+@font-face { font-family: "LW Carlito"; font-weight: 700; font-style: normal; font-display: swap; src: url("../fonts/Carlito-Bold.ttf") format("truetype"); }
+@font-face { font-family: "LW Carlito"; font-weight: 400; font-style: italic; font-display: swap; src: url("../fonts/Carlito-Italic.ttf") format("truetype"); }
+@font-face { font-family: "LW Carlito"; font-weight: 700; font-style: italic; font-display: swap; src: url("../fonts/Carlito-BoldItalic.ttf") format("truetype"); }
 :where([data-lw-viewer]) [data-lw-table] > table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 :where([data-lw-viewer]) [data-lw-table] { border: 0; border-radius: 0; overflow: visible; }
 :where([data-lw-viewer]) [data-lw-sizer] > td { height: 0; padding: 0; border: none; }

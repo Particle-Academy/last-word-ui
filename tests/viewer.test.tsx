@@ -203,7 +203,8 @@ describe("DocViewer", () => {
     const onLayout = vi.fn<(l: DocViewerLayout) => void>();
     render(<DocViewer doc={{ blocks: [para("a"), { type: "pageBreak" }, para("b")], page: { size: "a4" } }} onLayout={onLayout} scale={0.5} />);
     const last = onLayout.mock.calls[onLayout.mock.calls.length - 1]![0];
-    expect(last).toEqual({ pages: 2, pageWidth: 595.3, pageHeight: 841.9, scale: 0.5 });
+    // jsdom has no FontFaceSet, so the bundled font cannot be confirmed: "fallback".
+    expect(last).toEqual({ pages: 2, pageWidth: 595.3, pageHeight: 841.9, scale: 0.5, font: "fallback" });
     expect(JSON.parse(JSON.stringify(last))).toEqual(last);
   });
 

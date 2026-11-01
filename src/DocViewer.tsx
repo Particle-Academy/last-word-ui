@@ -15,7 +15,9 @@ import {
   hasBand,
   type RenderContext,
 } from "./render";
-import { DEFAULT_SIZE, DEFAULT_SPACE_AFTER, FOOTNOTE_SEPARATOR_PT, SINGLE_LINE, fontStack, num, pt, px } from "./style";
+import { carlitoUrls } from "./font-urls";
+import { carlitoFaces, fontFaceCss } from "./fonts";
+import { DEFAULT_SIZE, DEFAULT_SPACE_AFTER, FOOTNOTE_SEPARATOR_PT, num, pt, px, typography as typographyStyle } from "./style";
 import { VIEWER_CSS } from "./viewer-css";
 import type { Block, Doc, Page, TableBlock } from "./types";
 
@@ -27,6 +29,33 @@ export interface DocViewerLayout {
   pageHeight: number;
   /** The scale the pages are drawn at. */
   scale: number;
+  /**
+   * What Calibri and unspecified text was measured in. `"carlito"`: the
+   * bundled font, so the page count is the same on every machine (and agrees
+   * with last-word's `layout()`). `"fallback"`: it could not load (or the
+   * runtime has no FontFaceSet), so the count depends on this machine's fonts.
+   * `"unused"`: the document has no such text.
+   */
+  font: ViewerFont;
+}
+
+export type ViewerFont = "carlito" | "fallback" | "unused";
+
+/** How long the viewer waits for the bundled font before laying out without it. */
+export const FONT_LOAD_TIMEOUT_MS = 3000;
+
+/** The injected @font-face rules, or null where the font URLs cannot be resolved (CommonJS). */
+const FONT_CSS: string | null = (() => {
+  const urls = carlitoUrls();
+  return urls ? fontFaceCss((file) => urls[file]!) : null;
+})();
+
+type FontState = ViewerFont | "pending";
+
+function initialFontState(faces: string[]): FontState {
+  if (faces.length === 0) return "unused";
+  const fonts = typeof document !== "undefined" ? document.fonts : undefined;
+  return fonts && typeof fonts.load === "function" ? "pending" : "fallback";
 }
 
 export interface DocViewerProps {
@@ -131,6 +160,12 @@ export function DocViewer({
   const measureRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<Layout | null>(null);
   const [fontEpoch, setFontEpoch] = useState(0);
+  // The bundled Carlito faces this document draws. Nothing is measured until
+  // they have loaded: measuring with the fallback first would report a page
+  // count that changes a moment later.
+  const faces = useMemo(() => carlitoFaces(doc), [doc]);
+  const facesKey = faces.join("|");
+  const [font, setFont] = useState<FontState>(() => initialFontState(faces));
   const [width, setWidth] = useState<number | null>(null);
 
   const ctx: RenderContext = useMemo(
@@ -143,9 +178,26 @@ export function DocViewer({
     [numbering, doc, geometry],
   );
 
+  useEffect(() => {
+    const state = initialFontState(faces);
+    setFont(state);
+    if (state !== "pending") return;
+    let live = true;
+    const timer = setTimeout(() => live && setFont((f) => (f === "pending" ? "fallback" : f)), FONT_LOAD_TIMEOUT_MS);
+    Promise.all(faces.map((f) => document.fonts.load(f)))
+      .then((loaded) => live && setFont(loaded.every((l) => l.length > 0) ? "carlito" : "fallback"))
+      .catch(() => live && setFont("fallback"));
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+    // facesKey stands for faces: a new Doc object with the same faces does not reload.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facesKey]);
+
   useLayoutEffect(() => {
     const el = measureRef.current;
-    if (!el) return;
+    if (!el || font === "pending") return;
     const m = measure(el, blocks);
     const toPt = (h: Record<BandSlot, number>): Record<BandSlot, number> => ({
       default: h.default / PX_PER_PT,
@@ -162,7 +214,7 @@ export function DocViewer({
     });
     const heights = m.items.map((it) => (it.type === "block" ? it.height : 0));
     setLayout({ pages, boxes, heights });
-  }, [blocks, geometry, numbering, fontEpoch, page, docFields]);
+  }, [blocks, geometry, numbering, fontEpoch, page, docFields, font]);
 
   // Web fonts change line breaks; lay out again once they have loaded.
   useEffect(() => {
@@ -197,29 +249,32 @@ export function DocViewer({
 
   const pageCount = layout?.pages.length ?? 0;
   useEffect(() => {
-    if (layout) onLayout?.({ pages: layout.pages.length, pageWidth: geometry.width, pageHeight: geometry.height, scale });
-  }, [layout, geometry, scale, onLayout]);
+    if (layout && font !== "pending") {
+      onLayout?.({ pages: layout.pages.length, pageWidth: geometry.width, pageHeight: geometry.height, scale, font });
+    }
+  }, [layout, geometry, scale, onLayout, font]);
 
-  const typography: CSSProperties = {
-    fontFamily: fontStack(doc?.defaultFont),
-    fontSize: pt(ctx.size),
-    lineHeight: SINGLE_LINE,
-    color: "#000000",
-    textAlign: "left",
-  };
+  const typography: CSSProperties = typographyStyle(doc?.defaultFont, ctx.size);
+  const ready = layout !== null && font !== "pending";
 
   return (
     <div
       ref={rootRef}
       id={id}
       data-lw-viewer=""
-      data-lw-pages={pageCount || undefined}
+      data-lw-pages={(ready && pageCount) || undefined}
+      data-lw-font={ready ? font : undefined}
       className={className}
       style={{ position: "relative", ...style }}
     >
       {injectStyles && (
         <style href="particle-academy-last-word-ui" precedence="default">
           {VIEWER_CSS}
+        </style>
+      )}
+      {injectStyles && FONT_CSS && (
+        <style href="particle-academy-last-word-ui-fonts" precedence="default">
+          {FONT_CSS}
         </style>
       )}
 
@@ -272,7 +327,7 @@ export function DocViewer({
         </RenderCtx.Provider>
       </div>
 
-      {layout && (
+      {ready && layout && (
         <div data-lw-page-stack="" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap }}>
           {layout.pages.map((p) => (
             <PageView

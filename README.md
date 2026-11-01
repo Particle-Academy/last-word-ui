@@ -51,7 +51,7 @@ so a deep clone between numbering and render would lose the marks.
 | `gap` | `number` | `16` | px between pages |
 | `filename` | `string` | `""` | what a `{filename}` band field shows |
 | `now` | `Date \| string` | first render | the moment `{date}` / `{time}` show; an ISO string is fine |
-| `onLayout` | `(l) => void` | | `{ pages, pageWidth, pageHeight, scale }`, JSON |
+| `onLayout` | `(l) => void` | | `{ pages, pageWidth, pageHeight, scale, font }`, JSON; see *Fonts* |
 | `injectStyles` | `boolean` | `true` | see *Styles* |
 | `id`, `className`, `style` | | | on the root |
 
@@ -74,6 +74,41 @@ rules instead:
 ```ts
 import "@particle-academy/last-word-ui/styles.css";
 ```
+
+`styles.css` also declares the bundled font (below) with URLs relative to
+itself (`../fonts/*.ttf`), so the bundler that imports it emits the font files.
+Allow them in `font-src` (`'self'` covers it when you serve them from your own
+origin).
+
+### Fonts: the same page count on every machine
+
+Calibri, and text with no font named, draws in a **bundled Carlito** (family
+`"LW Carlito"`, first in the stack). Carlito is metric-compatible with Calibri:
+every printable ASCII and Latin-1 advance is identical in all four styles, so
+lines break where Calibri's would. Because the font ships with the package, a
+document paginates the same on a machine with Calibri, with Arial, or with
+neither, and the count agrees with last-word's `Agent::layout()` (PHP, 0.17.0),
+which measures with the same font's metrics.
+
+- Kerning and ligatures are off, as they are in Word by default, so a line is
+  exactly the sum of its advances.
+- The viewer **waits for the font** before it measures: no pages are drawn and
+  `onLayout` is not called until the faces the document uses have loaded (only
+  those are fetched; a plain memo never downloads the italics). After
+  `FONT_LOAD_TIMEOUT_MS` (3 s) it lays out without it.
+- `onLayout` reports `font`: `"carlito"` (deterministic), `"fallback"` (the
+  font could not load, so the count depends on this machine) or `"unused"` (no
+  Calibri text). The root carries the same value as `data-lw-font`.
+- Only Calibri and default text is deterministic. Any other font in the
+  document draws in that font as installed, as before.
+- With `injectStyles` (the default) the `@font-face` rules point at the files
+  through `new URL("../fonts/...", import.meta.url)`, which Vite, webpack 5,
+  Rollup and Parcel resolve to emitted assets. The CommonJS build has no
+  `import.meta`, so there it reports `"fallback"`: import `styles.css` instead.
+
+The four TTFs are Carlito 1.104 from
+[googlefonts/carlito](https://github.com/googlefonts/carlito), shipped
+unmodified under the SIL Open Font License 1.1 (`fonts/OFL.txt`, `fonts/NOTICE`).
 
 ## What it renders
 
@@ -150,4 +185,5 @@ npm run demo    # vite demo: a multi-page memo, wide and narrow
 
 ## License
 
-MIT
+MIT, except the fonts in `fonts/`: Carlito, SIL Open Font License 1.1, see
+`fonts/OFL.txt` and `fonts/NOTICE`.

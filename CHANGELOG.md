@@ -10,6 +10,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-01
+
+**What you must do: probably nothing, but expect page breaks to move.** Calibri
+and default text now draws in a bundled font with kerning off, so a document
+can break differently from 0.2.0, on every machine, including ones that had
+real Calibri or only Arial. That is the point: the count is now the same
+everywhere and matches last-word's `Agent::layout()`. Under a strict CSP you
+already import `styles.css`; allow its font files in `font-src`. On the
+CommonJS build, import `styles.css` too, or the viewer reports
+`font: "fallback"`.
+
+### Added
+
+- **A bundled Carlito** (1.104, from googlefonts/carlito, unmodified, SIL OFL
+  1.1 with a NOTICE in `fonts/`), declared as `"LW Carlito"` in regular, bold,
+  italic and bold italic. Metric-compatible with Calibri: every printable
+  ASCII and Latin-1 advance is equal in all four styles. The package now
+  publishes `fonts/` (about 2.7 MB of TTF; Carlito is not published as woff2
+  upstream, and these are the files as published). A browser fetches only the
+  faces a document uses.
+- `styles.css` declares the same `@font-face` rules, with URLs relative to the
+  stylesheet, for the strict-CSP route.
+- `DocViewerLayout.font`: `"carlito"`, `"fallback"` or `"unused"`, and
+  `data-lw-font` on the root, so a caller can tell a deterministic page count
+  from one that depends on the machine.
+- `FONT_LOAD_TIMEOUT_MS` (3000) and the `ViewerFont` type.
+- `demo/agreement.html`: the harness that renders documents in the viewer and
+  records the page layout last-word's `layout()` is held to. The fixtures it
+  produced are in `tests/fixtures/viewer-agreement.json` (the same bytes as in
+  last-word; both pin the sha256).
+
+### Changed
+
+- **Calibri and unspecified text draws in the bundled Carlito, first in the
+  stack**, ahead of `Calibri`, `Carlito`, `Segoe UI` and `Arial`. Pages may
+  break differently from 0.2.0 on any machine: where real Calibri was
+  installed, because kerning is now off; where it was not, because the text is
+  no longer in Segoe UI or Arial. Every other explicit font keeps its stack,
+  and its breaks still depend on the machine.
+- **Kerning and ligatures are off** (`font-kerning: none`,
+  `font-variant-ligatures: none`), as in Word by default, and
+  `text-rendering: geometricPrecision`.
+- **The viewer waits for the font before it measures.** No pages and no
+  `onLayout` until the faces the document draws have loaded (or 3 s pass).
+  0.2.0 drew pages in the fallback first and re-laid them out when web fonts
+  arrived, so `onLayout` could report a count that changed a moment later.
+
 ## [0.2.0] - 2026-11-01
 
 Renders last-word 0.16.0's band variants and field tokens. **Consumer action:
