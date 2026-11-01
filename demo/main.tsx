@@ -34,17 +34,23 @@ function memo(): Doc {
     ],
   }));
   return {
-    title: "Q3 Board Memo",
+    title: "Q3 2026 Board Memo",
+    meta: { author: "Finance Office" },
     page: {
       size: "letter",
       margins: { header: 28 },
-      header: {
+      // Page 1: the full letterhead. It is taller than the top margin, so only
+      // page 1's body moves down; later pages keep the 1in margin.
+      firstHeader: {
         blocks: [
           { type: "image", src: logo(), widthPx: 120, heightPx: 36 },
           { type: "paragraph", align: "right", spaceAfter: 0, runs: [{ text: "Acme Ltd, 1 Example Street, Springfield", size: 8, color: "#6B7280" }] },
+          { type: "paragraph", align: "right", spaceAfter: 0, runs: [{ text: "Prepared by {author} on {date:d MMMM yyyy}", size: 8, color: "#6B7280" }] },
         ],
       },
-      footer: { left: "Q3 2026 Board Memo", center: "Confidential", right: "Page {page} of {pages}" },
+      // Every later page: a one-line running header.
+      header: { left: "{title}", right: "{filename}" },
+      footer: { left: "{title}", center: "Confidential", right: "Page {page} of {pages}" },
     },
     blocks: [
       { type: "heading", level: 1, runs: [{ text: "Q3 2026 results", color: "#1F3A5F" }] },
@@ -119,10 +125,10 @@ function App() {
       </div>
       <div className="layout">
         <div className="panel wide">
-          <DocViewer doc={doc} onLayout={setLayout} />
+          <DocViewer doc={doc} filename="q3-board-memo.docx" now="2026-11-01T09:30:00" onLayout={setLayout} />
         </div>
         <div className="panel narrow">
-          <DocViewer doc={doc} />
+          <DocViewer doc={doc} filename="q3-board-memo.docx" now="2026-11-01T09:30:00" />
         </div>
       </div>
     </>

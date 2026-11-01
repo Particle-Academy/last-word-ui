@@ -10,6 +10,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-01
+
+Renders last-word 0.16.0's band variants and field tokens. **Consumer action:
+none.** Both new props are optional, and a document without the new page keys
+or tokens renders exactly as it did on 0.1.1. Pass `filename` and `now` only
+if your bands use `{filename}`, `{date}` or `{time}`.
+
+### Added
+
+- **First-page and even-page bands:** `page.firstHeader`, `page.firstFooter`,
+  `page.evenHeader` and `page.evenFooter`, in the same forms as `page.header`
+  (a one-line band or `{blocks}`). Page 1 draws the first variant when
+  present, even pages (2, 4, ...) the even variant, every other page the
+  default. `{"blocks": []}` as a variant blanks that page's band. Each band
+  carries `data-lw-band-variant` (`default`, `first` or `even`).
+- **Per-page body heights.** Each page's body is sized by the bands it
+  actually draws, so a tall first-page letterhead moves only page 1's body
+  down. `paginate()` takes optional `firstPageHeight` and `evenPageHeight`
+  beside `pageHeight`, and each `PageLayout` reports its `capacity`. Without
+  the new options, pagination is unchanged.
+- **Field tokens in band text:** `{section}` and `{sectionpages}` (a Doc is one
+  section: `1` and the page total), `{author}` (`doc.meta.author`), `{title}`
+  (the top-level `doc.title`; there is no `meta.title`), `{filename}`, and
+  `{date}` / `{time}` in the browser locale, or `{date:FORMAT}` /
+  `{time:FORMAT}` with a Word date-time picture (d to dddd, M to MMMM, yy,
+  yyyy, h, hh, H, HH, m, mm, s, ss, am/pm, AM/PM, single-quoted literals,
+  English names). Tokens follow last-word's grammar exactly; anything else in
+  braces stays literal. In the body every token stays literal text. Values
+  render as plain text only.
+- **Props:** `filename` (what `{filename}` shows; empty when absent) and `now`
+  (a Date or an ISO string; the moment `{date}` / `{time}` show, for
+  deterministic output).
+- **Exports:** `pageCapacity`, `pageBand`, `pageClass`, `bandSlot`,
+  `pageBodyBoxes`, `formatDatePicture`, `resolveNow`, and the `BandKind`,
+  `BandSlot`, `PageClass`, `BandHeights` and `DocMeta` types. `PageFields`
+  gains optional `section`, `sectionPages`, `author`, `title`, `filename` and
+  `now`; `substituteFields(text, { page, pages })` still works as before.
+
 ## [0.1.1] - 2026-11-01
 
 ### Changed

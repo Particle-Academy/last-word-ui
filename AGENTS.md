@@ -12,6 +12,8 @@ measure.ts      DOM rects -> PackItem[]       (the ONLY browser-dependent step)
 paginate.ts     PackItem[] -> PageLayout[]    (pure; every pagination rule is a unit test)
 render.tsx      block / run / table / band / footnote renderers (react-fancy primitives)
 geometry.ts     paper sizes, pageMargins() (THE place defaults live), bodyBox()
+bands.ts        which header/footer each page draws (default / first / even), body box per page class
+fields.ts       band field tokens and the Word date-time picture formatter (pure)
 footnotes.ts    numbering, keyed by Run identity
 table-grid.ts   HTML-style spans -> grid columns, joinPrevious, header rows
 style.ts        pt helpers, Word's writer defaults, CSS sanitising
@@ -33,6 +35,17 @@ style.ts        pt helpers, Word's writer defaults, CSS sanitising
   measures above the block's top. Unclamped, it fell between fragments and the
   note vanished from every page (found in the browser, pinned in
   `paginate.test.ts`).
+- **Body height is per page CLASS, not per document.** Page 1, even pages and
+  the other odd pages can draw different bands (last-word 0.16.0), so
+  `pageBodyBoxes()` derives one body box per class from the bands that class
+  draws, and `paginate()` takes `firstPageHeight` / `evenPageHeight` beside
+  `pageHeight` (`pageCapacity()`). Every packer rule works at the capacity of
+  the page it is filling; a keep-with-next chain moves only if the NEXT
+  page's capacity holds it. Band selection lives in `bands.ts` alone: the
+  measuring copy measures every slot, the pages draw `pageBand()`.
+- **Field tokens are band-only and text-only.** `substituteFields` returns a
+  string that renders as a React text node. Band fields come from one
+  `docFields` object shared by the measuring copy and the pages.
 - **Footnote numbering is keyed by Run identity.** Do not clone the Doc inside
   the viewer.
 - **Doc content is untrusted.** Links go through `safeHref`, images render only

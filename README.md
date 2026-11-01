@@ -49,6 +49,8 @@ so a deep clone between numbering and render would lose the marks.
 | `scale` | `number` | | a fixed scale; overrides `fit` |
 | `maxScale` | `number` | `1` | the most `fit` will enlarge a page |
 | `gap` | `number` | `16` | px between pages |
+| `filename` | `string` | `""` | what a `{filename}` band field shows |
+| `now` | `Date \| string` | first render | the moment `{date}` / `{time}` show; an ISO string is fine |
 | `onLayout` | `(l) => void` | | `{ pages, pageWidth, pageHeight, scale }`, JSON |
 | `injectStyles` | `boolean` | `true` | see *Styles* |
 | `id`, `className`, `style` | | | on the root |
@@ -58,7 +60,8 @@ so a deep clone between numbering and render would lose the marks.
 The root carries `data-lw-viewer`. Each page carries `data-page` (1-based), each
 block or fragment of a block carries `data-block` (`b0`, `b1`, ... in document
 order), each footnote carries `data-footnote`, and the bands carry
-`data-lw-band="header" | "footer"`. Table fragments carry `data-lw-rows`, plus
+`data-lw-band="header" | "footer"`, with `data-lw-band-variant="default" |
+"first" | "even"` naming the band drawn. Table fragments carry `data-lw-rows`, plus
 `data-lw-repeated-header` on continuation pages.
 
 ### Styles
@@ -86,8 +89,22 @@ import "@particle-academy/last-word-ui/styles.css";
   edge (36pt when absent). They are either a left / centre / right band or
   blocks (a letterhead logo, address lines). A tall header pushes the body down,
   as in Word.
-- **Page numbers:** `{page}` and `{pages}` become live numbers on each page,
-  in bands only. In the body they stay literal text, as in the file.
+- **First-page and even-page bands** (last-word 0.16.0): page 1 draws
+  `page.firstHeader` / `page.firstFooter` when present, even pages (2, 4, ...)
+  `page.evenHeader` / `page.evenFooter`, and every other page the default.
+  `{"blocks": []}` as a variant blanks that page's band. Each page's body is
+  sized by the bands it actually draws, so a tall first-page letterhead moves
+  only page 1's body down.
+- **Fields in bands:** `{page}`, `{pages}`; `{section}` and `{sectionpages}`
+  (a Doc is one section, so `1` and the page total); `{author}`
+  (`doc.meta.author`); `{title}` (the top-level `doc.title`; there is no
+  `meta.title`); `{filename}` (the `filename` prop); `{date}` and `{time}` in
+  the browser's locale, or `{date:FORMAT}` / `{time:FORMAT}` with a Word
+  picture (`d dd ddd dddd M MM MMM MMMM yy yyyy h hh H HH m mm s ss am/pm
+  AM/PM`, text in single quotes literal, English names). Unknown values are
+  empty. Names are lower-case and exact; anything else in braces stays
+  literal. All of it is drawn as plain text. In the body every token stays
+  literal text, as in the file.
 - **Footnotes:** numbered 1, 2, 3 in document order and set at the foot of the
   mark's page, under a short rule. Their height comes off that page's body.
 - **Content:** tables (widths, header rows, cell shading, borders, padding,

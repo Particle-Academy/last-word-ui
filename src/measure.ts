@@ -1,3 +1,4 @@
+import { BAND_SLOTS, type BandHeights } from "./bands";
 import { tableGrid } from "./table-grid";
 import type { PackItem } from "./paginate";
 import type { Block } from "./types";
@@ -58,18 +59,21 @@ export function lineBreakpoints(el: HTMLElement): number[] {
 
 export interface Measured {
   items: PackItem[];
-  /** px */
+  /** px: the default header (`bands.header.default`). */
   headerHeight: number;
-  /** px */
+  /** px: the default footer (`bands.footer.default`). */
   footerHeight: number;
+  /** px, every header and footer slot; 0 for one not drawn. */
+  bands: BandHeights;
   /** px */
   footnoteSeparator: number;
 }
 
 /**
  * Read the measuring container `root`. It holds `[data-lw-measure-block=i]`
- * per block, `[data-lw-measure-footnote=id]` per note, and the header, footer
- * and separator under their own `data-lw-measure-*` keys.
+ * per block, `[data-lw-measure-footnote=id]` per note,
+ * `[data-lw-measure-band="header:first"]` (kind:slot) per drawn band, and the
+ * separator under `data-lw-measure-separator`.
  */
 export function measure(root: HTMLElement, blocks: Block[]): Measured {
   const noteHeights = new Map<number, number>();
@@ -124,10 +128,18 @@ export function measure(root: HTMLElement, blocks: Block[]): Measured {
     };
   });
 
+  const bands = { header: {}, footer: {} } as BandHeights;
+  for (const kind of ["header", "footer"] as const) {
+    for (const slot of BAND_SLOTS) {
+      bands[kind][slot] = height(root.querySelector(`[data-lw-measure-band="${kind}:${slot}"]`));
+    }
+  }
+
   return {
     items,
-    headerHeight: height(root.querySelector("[data-lw-measure-header]")),
-    footerHeight: height(root.querySelector("[data-lw-measure-footer]")),
+    headerHeight: bands.header.default,
+    footerHeight: bands.footer.default,
+    bands,
     footnoteSeparator: height(root.querySelector("[data-lw-measure-separator]")),
   };
 }

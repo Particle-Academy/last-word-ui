@@ -1,7 +1,9 @@
 export { DocViewer } from "./DocViewer";
 export type { DocViewerProps, DocViewerLayout } from "./DocViewer";
 export { docFromReader } from "./from-reader";
-export { paginate } from "./paginate";
+export { paginate, pageCapacity } from "./paginate";
+export { pageBand, pageClass, bandSlot, pageBodyBoxes } from "./bands";
+export type { BandKind, BandSlot, PageClass, BandHeights } from "./bands";
 export type {
   PackItem,
   PackOptions,
@@ -25,7 +27,7 @@ export {
   PX_PER_PT,
 } from "./geometry";
 export type { PageGeometry, ResolvedMargins, BodyBox } from "./geometry";
-export { substituteFields } from "./fields";
+export { substituteFields, formatDatePicture, resolveNow } from "./fields";
 export type { PageFields } from "./fields";
 export { numberFootnotes } from "./footnotes";
 export type { FootnoteNumbering } from "./footnotes";

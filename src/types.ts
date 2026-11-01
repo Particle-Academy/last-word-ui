@@ -220,12 +220,34 @@ export interface Page {
   size?: PageSize;
   orientation?: Orientation;
   margins?: PageMargins;
+  /** Every page, unless a variant below covers it. */
   header?: Band | BlocksBand;
   footer?: Band | BlocksBand;
+  /**
+   * Page 1 only, in place of `header` / `footer` (last-word 0.16.0, Word's
+   * "Different first page"). `{"blocks": []}` blanks page 1's band.
+   */
+  firstHeader?: Band | BlocksBand;
+  firstFooter?: Band | BlocksBand;
+  /**
+   * Even pages (2, 4, ...), in place of `header` / `footer` (last-word 0.16.0,
+   * Word's "Different odd and even pages"). `{"blocks": []}` blanks them.
+   */
+  evenHeader?: Band | BlocksBand;
+  evenFooter?: Band | BlocksBand;
+}
+
+/** Document properties (last-word 0.16.0). */
+export interface DocMeta {
+  /** Word's Author property: what an `{author}` field in a band shows. */
+  author?: string;
+  [key: string]: unknown;
 }
 
 export interface Doc {
+  /** The document title: what a `{title}` field in a band shows. */
   title?: string;
+  meta?: DocMeta;
   blocks: Block[];
   page?: Page;
   defaultFont?: string;

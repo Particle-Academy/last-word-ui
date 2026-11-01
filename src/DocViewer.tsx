@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { BAND_SLOTS, bandSlot, pageBand, pageBodyBoxes, pageClass, slotBand, type BandKind, type BandSlot, type PageClass } from "./bands";
+import { resolveNow, type PageFields } from "./fields";
 import { numberFootnotes, type FootnoteNumbering } from "./footnotes";
-import { PX_PER_PT, bodyBox, pageGeometry, type BodyBox, type PageGeometry } from "./geometry";
+import { PX_PER_PT, pageGeometry, type BodyBox, type PageGeometry } from "./geometry";
 import { blockId, measure } from "./measure";
 import { paginate, type Fragment, type PageLayout } from "./paginate";
 import {
@@ -15,7 +17,7 @@ import {
 } from "./render";
 import { DEFAULT_SIZE, DEFAULT_SPACE_AFTER, FOOTNOTE_SEPARATOR_PT, SINGLE_LINE, fontStack, num, pt, px } from "./style";
 import { VIEWER_CSS } from "./viewer-css";
-import type { Band, Block, BlocksBand, Doc, TableBlock } from "./types";
+import type { Block, Doc, Page, TableBlock } from "./types";
 
 export interface DocViewerLayout {
   /** Number of pages the document laid out to. */
@@ -42,6 +44,17 @@ export interface DocViewerProps {
   maxScale?: number;
   /** Space between pages, in CSS px. Default 16. */
   gap?: number;
+  /**
+   * What a `{filename}` field in a header or footer shows. The viewer cannot
+   * know the file's name, so it is empty unless given.
+   */
+  filename?: string;
+  /**
+   * The moment `{date}` / `{time}` fields show: a Date or an ISO-8601 string
+   * (JSON-friendly). Default: the time of the first render. Pass it for
+   * deterministic output (tests, agents, a print preview "as of" a date).
+   */
+  now?: Date | string;
   /** Called after every layout with JSON-serializable facts about it. */
   onLayout?: (layout: DocViewerLayout) => void;
   /**
@@ -57,7 +70,8 @@ export interface DocViewerProps {
 
 interface Layout {
   pages: PageLayout[];
-  box: BodyBox;
+  /** The body box of each page class: its bands can differ, so its body can too. */
+  boxes: Record<PageClass, BodyBox>;
   /** Measured block heights (px), by item index, to tell a whole block from a fragment. */
   heights: number[];
 }
@@ -69,7 +83,13 @@ interface Layout {
  *
  * Stable handles: the root carries `data-lw-viewer`; each page `data-page`
  * (1-based); each block or fragment of one `data-block` (`b0`, `b1`, ... in
- * document order); each footnote `data-footnote`; bands `data-lw-band`.
+ * document order); each footnote `data-footnote`; bands `data-lw-band`, with
+ * `data-lw-band-variant` naming the one drawn (`default`, `first`, `even`).
+ *
+ * Header and footer text takes field tokens -- `{page}`, `{pages}`,
+ * `{section}`, `{sectionpages}`, `{author}`, `{title}`, `{filename}`, `{date}`,
+ * `{time}`, `{date:FORMAT}`, `{time:FORMAT}` -- drawn as plain text. In the
+ * body they stay literal.
  */
 export function DocViewer({
   doc,
@@ -77,6 +97,8 @@ export function DocViewer({
   scale: fixedScale,
   maxScale = 1,
   gap = 16,
+  filename,
+  now,
   onLayout,
   injectStyles = true,
   id,
@@ -86,8 +108,24 @@ export function DocViewer({
   const geometry = useMemo(() => pageGeometry(doc), [doc]);
   const numbering = useMemo(() => numberFootnotes(doc), [doc]);
   const blocks: Block[] = useMemo(() => (Array.isArray(doc?.blocks) ? doc.blocks : []), [doc]);
-  const header = hasBand(doc?.page?.header) ? doc.page!.header! : null;
-  const footer = hasBand(doc?.page?.footer) ? doc.page!.footer! : null;
+  const page: Page | undefined = doc?.page && typeof doc.page === "object" ? doc.page : undefined;
+  // Keyed by value, so a parent passing a fresh Date each render does not re-lay out.
+  const nowKey = now instanceof Date ? now.getTime() : now;
+  const nowDate = useMemo(() => resolveNow(nowKey === undefined ? undefined : typeof nowKey === "number" ? new Date(nowKey) : nowKey), [nowKey]);
+  const author = doc?.meta && typeof doc.meta === "object" ? doc.meta.author : undefined;
+  const title = doc?.title;
+  // Everything a band field shows except the page numbers. Shared by the
+  // measuring copy and the pages, so both render the same text.
+  const docFields: Omit<PageFields, "page" | "pages"> = useMemo(
+    () => ({
+      section: 1,
+      ...(typeof author === "string" ? { author } : {}),
+      ...(typeof title === "string" ? { title } : {}),
+      ...(typeof filename === "string" ? { filename } : {}),
+      now: nowDate,
+    }),
+    [author, title, filename, nowDate],
+  );
 
   const rootRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -109,11 +147,22 @@ export function DocViewer({
     const el = measureRef.current;
     if (!el) return;
     const m = measure(el, blocks);
-    const box = bodyBox(geometry, m.headerHeight / PX_PER_PT, m.footerHeight / PX_PER_PT);
-    const pages = paginate(m.items, { pageHeight: box.height * PX_PER_PT, footnoteSeparator: m.footnoteSeparator });
+    const toPt = (h: Record<BandSlot, number>): Record<BandSlot, number> => ({
+      default: h.default / PX_PER_PT,
+      first: h.first / PX_PER_PT,
+      even: h.even / PX_PER_PT,
+    });
+    // One body box per page class, from the bands that class actually draws.
+    const boxes = pageBodyBoxes(geometry, page, { header: toPt(m.bands.header), footer: toPt(m.bands.footer) });
+    const pages = paginate(m.items, {
+      pageHeight: boxes.odd.height * PX_PER_PT,
+      firstPageHeight: boxes.first.height * PX_PER_PT,
+      evenPageHeight: boxes.even.height * PX_PER_PT,
+      footnoteSeparator: m.footnoteSeparator,
+    });
     const heights = m.items.map((it) => (it.type === "block" ? it.height : 0));
-    setLayout({ pages, box, heights });
-  }, [blocks, geometry, numbering, fontEpoch, header, footer]);
+    setLayout({ pages, boxes, heights });
+  }, [blocks, geometry, numbering, fontEpoch, page, docFields]);
 
   // Web fonts change line breaks; lay out again once they have loaded.
   useEffect(() => {
@@ -190,19 +239,20 @@ export function DocViewer({
         }}
       >
         <RenderCtx.Provider value={ctx}>
-          {header && (
-            <div data-lw-measure-header="">
-              <RenderCtx.Provider value={{ ...ctx, fields: { page: 1, pages: 1 } }}>
-                <BandView band={header} />
-              </RenderCtx.Provider>
-            </div>
-          )}
-          {footer && (
-            <div data-lw-measure-footer="">
-              <RenderCtx.Provider value={{ ...ctx, fields: { page: 1, pages: 1 } }}>
-                <BandView band={footer} />
-              </RenderCtx.Provider>
-            </div>
+          {(["header", "footer"] as const).flatMap((kind) =>
+            BAND_SLOTS.map((slot) => {
+              const band = slotBand(page, kind, slot);
+              if (!hasBand(band)) return null;
+              // Measured as a page of its class draws it: page 1, or page 2 for an even band.
+              const n = slot === "even" ? 2 : 1;
+              return (
+                <div key={`${kind}:${slot}`} data-lw-measure-band={`${kind}:${slot}`}>
+                  <RenderCtx.Provider value={{ ...ctx, fields: { ...docFields, page: n, pages: n } }}>
+                    <BandView band={band} />
+                  </RenderCtx.Provider>
+                </div>
+              );
+            }),
           )}
           {blocks.map((b, i) => (
             <div key={i} data-lw-measure-block={i} style={{ display: "flow-root" }}>
@@ -224,18 +274,18 @@ export function DocViewer({
 
       {layout && (
         <div data-lw-page-stack="" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap }}>
-          {layout.pages.map((page) => (
+          {layout.pages.map((p) => (
             <PageView
-              key={page.index}
-              page={page}
+              key={p.index}
+              page={p}
               pages={layout.pages.length}
               geometry={geometry}
-              box={layout.box}
+              box={layout.boxes[pageClass(p.index)]}
               scale={scale}
               typography={typography}
               ctx={ctx}
-              header={header}
-              footer={footer}
+              docPage={page}
+              docFields={docFields}
               numbering={numbering}
               blocks={blocks}
               heights={layout.heights}
@@ -255,17 +305,21 @@ interface PageViewProps {
   scale: number;
   typography: CSSProperties;
   ctx: RenderContext;
-  header: Band | BlocksBand | null;
-  footer: Band | BlocksBand | null;
+  docPage: Page | undefined;
+  docFields: Omit<PageFields, "page" | "pages">;
   numbering: FootnoteNumbering;
   blocks: Block[];
   heights: number[];
 }
 
-function PageView({ page, pages, geometry, box, scale, typography, ctx, header, footer, numbering, blocks, heights }: PageViewProps) {
+function PageView({ page, pages, geometry, box, scale, typography, ctx, docPage, docFields, numbering, blocks, heights }: PageViewProps) {
   const n = page.index + 1;
   const g = geometry;
-  const bandCtx = { ...ctx, fields: { page: n, pages } };
+  const bandCtx = { ...ctx, fields: { ...docFields, page: n, pages, sectionPages: pages } };
+  const cls = pageClass(page.index);
+  const header = pageBand(docPage, "header", page.index);
+  const footer = pageBand(docPage, "footer", page.index);
+  const variant = (kind: BandKind) => bandSlot(docPage, kind, cls);
   const notes = page.footnotes
     .map((fid) => numbering.notes.find((x) => x.id === fid))
     .filter((x): x is FootnoteNumbering["notes"][number] => !!x);
@@ -292,6 +346,7 @@ function PageView({ page, pages, geometry, box, scale, typography, ctx, header, 
         {header && (
           <div
             data-lw-band="header"
+            data-lw-band-variant={variant("header")}
             style={{ position: "absolute", top: pt(g.margins.header), left: pt(g.margins.left), width: pt(g.contentWidth) }}
           >
             <RenderCtx.Provider value={bandCtx}>
@@ -332,6 +387,7 @@ function PageView({ page, pages, geometry, box, scale, typography, ctx, header, 
         {footer && (
           <div
             data-lw-band="footer"
+            data-lw-band-variant={variant("footer")}
             style={{ position: "absolute", bottom: pt(g.margins.footer), left: pt(g.margins.left), width: pt(g.contentWidth) }}
           >
             <RenderCtx.Provider value={bandCtx}>
