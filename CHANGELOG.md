@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-01
+
 ### Changed
 - Test environment: `jsdom` moved from 26 to 30 (devDependency only). jsdom 26
   pulled in `whatwg-encoding`, which is deprecated upstream and printed a
