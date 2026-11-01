@@ -1,0 +1,8 @@
+/* @particle-academy/last-word-ui -- import this ONLY under a strict CSP, with
+   <DocViewer injectStyles={false} />. By default the viewer renders the same
+   rules itself. Kept identical to src/viewer-css.ts. */
+:where([data-lw-viewer]) [data-lw-table] > table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+:where([data-lw-viewer]) [data-lw-table] { border: 0; border-radius: 0; overflow: visible; }
+:where([data-lw-viewer]) [data-lw-sizer] > td { height: 0; padding: 0; border: none; }
+:where([data-lw-viewer]) hr[data-react-fancy-separator] { margin: 0; width: 100%; border: 0; border-top: 0.75pt solid #000000; }
+:where([data-lw-viewer]) [data-lw-sheet] p, :where([data-lw-viewer]) [data-lw-measure] p { margin-top: 0; margin-bottom: 0; }
