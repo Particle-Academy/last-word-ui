@@ -21,6 +21,13 @@ export interface TableGrid {
   headerRows: number;
 }
 
+/**
+ * The most columns one cell may span: last-word's `Schema::MAX_COL_SPAN`. The
+ * viewer never refuses a document, so here it is a clamp. Without it a few bytes
+ * of JSON could ask the browser for any number of columns (one sizer cell each).
+ */
+export const MAX_COL_SPAN = 1000;
+
 const span = (v: unknown): number => (typeof v === "number" && Number.isInteger(v) && v > 1 ? v : 1);
 
 /**
@@ -29,28 +36,37 @@ const span = (v: unknown): number => (typeof v === "number" && Number.isInteger(
  * a row span from above occupies is skipped when placing a row's cells.
  */
 export function tableGrid(rows: TableRow[]): TableGrid {
-  const occupied: Array<Set<number>> = rows.map(() => new Set<number>());
   const joinPrevious = rows.map(() => false);
   let colCount = 0;
+  // Row spans from rows above, as [lastRow, start, end). Covered slots are
+  // intervals and never enumerated: a cell costs the same at any span.
+  let active: Array<[number, number, number]> = [];
+  let reach = -1; // the last row any span so far extends into
 
   const out = rows.map((row, r) => {
+    joinPrevious[r] = r <= reach;
+    active = active.filter((s) => s[0] >= r).sort((a, b) => a[1] - b[1]);
+    const above = active.length;
+    let j = 0;
     const placed: GridCell[] = [];
     let col = 0;
     (Array.isArray(row?.cells) ? row.cells : []).forEach((cell, c) => {
-      while (occupied[r]!.has(col)) col++;
-      const colSpan = span(cell?.colSpan);
+      while (j < above && active[j]![1] <= col) {
+        col = Math.max(col, active[j]![2]);
+        j++;
+      }
+      const colSpan = Math.min(MAX_COL_SPAN, span(cell?.colSpan));
       const rowSpan = Math.min(span(cell?.rowSpan), rows.length - r);
-      for (let dr = 0; dr < rowSpan; dr++) {
-        for (let dc = 0; dc < colSpan; dc++) occupied[r + dr]!.add(col + dc);
-        if (dr > 0) joinPrevious[r + dr] = true;
+      if (rowSpan > 1) {
+        active.push([r + rowSpan - 1, col, col + colSpan]);
+        reach = Math.max(reach, r + rowSpan - 1);
       }
       placed.push({ row: r, cell: c, col, colSpan, rowSpan });
       col += colSpan;
+      colCount = Math.max(colCount, col);
     });
     return placed;
   });
-
-  for (const set of occupied) for (const c of set) colCount = Math.max(colCount, c + 1);
 
   let headerRows = 0;
   while (headerRows < rows.length && rows[headerRows]?.header === true) headerRows++;

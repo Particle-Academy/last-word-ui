@@ -10,6 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**What you must do: nothing.** A document with a `colSpan` of 1000 or less draws
+exactly as it did.
+
+### Security
+
+- A table cell's column span had no upper limit here either, so a very small
+  document could cost a browser tab far more than its size. `tableGrid()` clamps a
+  `colSpan` to 1000 (`MAX_COL_SPAN`, last-word's limit) and no longer spends memory
+  on each slot a span covers. The viewer still never refuses a document.
+  **Consumer action:** upgrade. If you vendored `doc-viewer` with `fancy-cli`,
+  add it again to take the fix: a vendored copy does not update itself.
+
 ## [0.4.0] - 2026-11-03
 
 **What you must do: nothing.** A document with one page setup draws exactly as
