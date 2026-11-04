@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-04
+
 ### Added
 
 - **Mixed page orientation.** A `pageBreak` carrying `page` changes the page from there on: each page is drawn at its own size and margins, with its own bands, and its text measured at its own width. `margins` merge side by side, every other key is replaced whole, `firstHeader` / `firstFooter` are never inherited and on a break mean the first page after it, and even bands follow the page number. `{section}` counts the stretches and `{sectionpages}` is the page count of the current one, as Word's `SECTION` and `SECTIONPAGES`. One scale serves every page, from the widest.
