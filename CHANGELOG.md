@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-03
+
 **What you must do: nothing.** A document with one page setup draws exactly as
 before, with no new element and no new `onLayout` key. Under Tailwind, your build
 needs react-fancy's classes as it already does.
