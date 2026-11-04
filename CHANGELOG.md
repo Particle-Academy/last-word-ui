@@ -10,6 +10,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**What you must do: nothing.** A document with one page setup draws exactly as
+before, with no new element and no new `onLayout` key. Under Tailwind, your build
+needs react-fancy's classes as it already does.
+
+### Added
+
+- **A visible notice when a document asks for mixed page layout** (mixed page
+  orientation, stage 1). `pageBreak.page`, page keys written straight on a break
+  (`pageBreak.orientation`, `.margins`, ...) and a top-level `sections` were silently
+  ignored, so a landscape section drew as portrait with nothing said. The document
+  still draws, one page setup as before, under a react-fancy `Callout`
+  (`data-lw-layout-notice`) in light and dark. `onLayout` gains `notShown`, JSON
+  Pointers to what it ignored, present only when there is something to report. New
+  exports: `LAYOUT_NOTICE`, `unshownLayout(doc)`. Per-page geometry comes in a later
+  release; **consumer action:** none. Those near-miss keys and `sections` do not
+  exist: `pageBreak.page` is the form, and `last-word` refuses all of them on write
+  until it can honour the first.
+
 ## [0.3.0] - 2026-11-01
 
 **What you must do: probably nothing, but expect page breaks to move.** Calibri

@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Callout } from "@particle-academy/react-fancy";
 import { BAND_SLOTS, bandSlot, pageBand, pageBodyBoxes, pageClass, slotBand, type BandKind, type BandSlot, type PageClass } from "./bands";
 import { resolveNow, type PageFields } from "./fields";
 import { numberFootnotes, type FootnoteNumbering } from "./footnotes";
+import { LAYOUT_NOTICE, unshownLayout } from "./layout-notice";
 import { PX_PER_PT, pageGeometry, type BodyBox, type PageGeometry } from "./geometry";
 import { blockId, measure } from "./measure";
 import { paginate, type Fragment, type PageLayout } from "./paginate";
@@ -37,6 +39,12 @@ export interface DocViewerLayout {
    * `"unused"`: the document has no such text.
    */
   font: ViewerFont;
+  /**
+   * JSON Pointers to page layout the document asks for and this viewer does not
+   * show (`pageBreak.page`, page keys straight on a break, a top-level `sections`).
+   * Absent when there is none. The visible notice says the same thing.
+   */
+  notShown?: string[];
 }
 
 export type ViewerFont = "carlito" | "fallback" | "unused";
@@ -113,7 +121,8 @@ interface Layout {
  * Stable handles: the root carries `data-lw-viewer`; each page `data-page`
  * (1-based); each block or fragment of one `data-block` (`b0`, `b1`, ... in
  * document order); each footnote `data-footnote`; bands `data-lw-band`, with
- * `data-lw-band-variant` naming the one drawn (`default`, `first`, `even`).
+ * `data-lw-band-variant` naming the one drawn (`default`, `first`, `even`);
+ * `data-lw-layout-notice` when the document asks for page layout it does not show.
  *
  * Header and footer text takes field tokens -- `{page}`, `{pages}`,
  * `{section}`, `{sectionpages}`, `{author}`, `{title}`, `{filename}`, `{date}`,
@@ -247,12 +256,21 @@ export function DocViewer({
         ? 1
         : Math.min(maxScale, width / pageWpx);
 
+  const notShown = useMemo(() => unshownLayout(doc), [doc]);
+
   const pageCount = layout?.pages.length ?? 0;
   useEffect(() => {
     if (layout && font !== "pending") {
-      onLayout?.({ pages: layout.pages.length, pageWidth: geometry.width, pageHeight: geometry.height, scale, font });
+      onLayout?.({
+        pages: layout.pages.length,
+        pageWidth: geometry.width,
+        pageHeight: geometry.height,
+        scale,
+        font,
+        ...(notShown.length > 0 ? { notShown } : {}),
+      });
     }
-  }, [layout, geometry, scale, onLayout, font]);
+  }, [layout, geometry, scale, onLayout, font, notShown]);
 
   const typography: CSSProperties = typographyStyle(doc?.defaultFont, ctx.size);
   const ready = layout !== null && font !== "pending";
@@ -276,6 +294,13 @@ export function DocViewer({
         <style href="particle-academy-last-word-ui-fonts" precedence="default">
           {FONT_CSS}
         </style>
+      )}
+
+      {/* Outside the measuring copy and the sheets, so it moves no page break. */}
+      {notShown.length > 0 && (
+        <div data-lw-layout-notice="" style={{ marginBottom: gap }}>
+          <Callout color="amber">{LAYOUT_NOTICE}</Callout>
+        </div>
       )}
 
       {/* Hidden measuring copy at the text width: the packer's only input. */}

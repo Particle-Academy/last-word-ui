@@ -2,6 +2,7 @@ export { DocViewer, FONT_LOAD_TIMEOUT_MS } from "./DocViewer";
 export type { DocViewerProps, DocViewerLayout, ViewerFont } from "./DocViewer";
 export { CARLITO_FAMILY, CARLITO_FACES, carlitoFaces, fontFaceCss } from "./fonts";
 export { docFromReader } from "./from-reader";
+export { LAYOUT_NOTICE, unshownLayout } from "./layout-notice";
 export { paginate, pageCapacity } from "./paginate";
 export { pageBand, pageClass, bandSlot, pageBodyBoxes } from "./bands";
 export type { BandKind, BandSlot, PageClass, BandHeights } from "./bands";

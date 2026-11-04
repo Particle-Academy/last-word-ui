@@ -13,6 +13,7 @@ paginate.ts     PackItem[] -> PageLayout[]    (pure; every pagination rule is a 
 render.tsx      block / run / table / band / footnote renderers (react-fancy primitives)
 geometry.ts     paper sizes, pageMargins() (THE place defaults live), bodyBox()
 bands.ts        which header/footer each page draws (default / first / even), body box per page class
+layout-notice.ts page layout the doc asks for and the viewer ignores (pageBreak.page, near-miss keys, sections), and the notice's words
 fields.ts       band field tokens and the Word date-time picture formatter (pure)
 footnotes.ts    numbering, keyed by Run identity
 table-grid.ts   HTML-style spans -> grid columns, joinPrevious, header rows
