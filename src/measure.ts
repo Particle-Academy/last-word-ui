@@ -63,8 +63,10 @@ export interface Measured {
   headerHeight: number;
   /** px: the default footer (`bands.footer.default`). */
   footerHeight: number;
-  /** px, every header and footer slot; 0 for one not drawn. */
+  /** px, every header and footer slot; 0 for one not drawn. The first stretch's. */
   bands: BandHeights;
+  /** px, the same for each stretch. */
+  stretchBands: BandHeights[];
   /** px */
   footnoteSeparator: number;
 }
@@ -72,10 +74,11 @@ export interface Measured {
 /**
  * Read the measuring container `root`. It holds `[data-lw-measure-block=i]`
  * per block, `[data-lw-measure-footnote=id]` per note,
- * `[data-lw-measure-band="header:first"]` (kind:slot) per drawn band, and the
- * separator under `data-lw-measure-separator`.
+ * `[data-lw-measure-band="header:first"]` (kind:slot) per drawn band, prefixed
+ * `2:` and so on for a later stretch, and the separator under
+ * `data-lw-measure-separator`.
  */
-export function measure(root: HTMLElement, blocks: Block[]): Measured {
+export function measure(root: HTMLElement, blocks: Block[], stretchCount = 1): Measured {
   const noteHeights = new Map<number, number>();
   root.querySelectorAll<HTMLElement>("[data-lw-measure-footnote]").forEach((el) => {
     noteHeights.set(Number(el.dataset.lwMeasureFootnote), height(el));
@@ -128,18 +131,24 @@ export function measure(root: HTMLElement, blocks: Block[]): Measured {
     };
   });
 
-  const bands = { header: {}, footer: {} } as BandHeights;
-  for (const kind of ["header", "footer"] as const) {
-    for (const slot of BAND_SLOTS) {
-      bands[kind][slot] = height(root.querySelector(`[data-lw-measure-band="${kind}:${slot}"]`));
+  const stretchBands = Array.from({ length: Math.max(1, stretchCount) }, (_, k) => {
+    const bands = { header: {}, footer: {} } as BandHeights;
+    for (const kind of ["header", "footer"] as const) {
+      for (const slot of BAND_SLOTS) {
+        const at = k === 0 ? `${kind}:${slot}` : `${k + 1}:${kind}:${slot}`;
+        bands[kind][slot] = height(root.querySelector(`[data-lw-measure-band="${at}"]`));
+      }
     }
-  }
+    return bands;
+  });
+  const bands = stretchBands[0]!;
 
   return {
     items,
     headerHeight: bands.header.default,
     footerHeight: bands.footer.default,
     bands,
+    stretchBands,
     footnoteSeparator: height(root.querySelector("[data-lw-measure-separator]")),
   };
 }

@@ -9,7 +9,7 @@
  * disagreement can be traced to the block that caused it.
  */
 import { createRoot } from "react-dom/client";
-import { DocViewer, PX_PER_PT, pageBodyBoxes, pageGeometry, type Doc, type DocViewerLayout, type PackItem, type PackOptions } from "../src";
+import { DocViewer, docStretches, packInput, type Doc, type DocViewerLayout, type PackItem, type PackOptions } from "../src";
 import { lineBreakpoints, measure } from "../src/measure";
 
 interface Result {
@@ -32,15 +32,9 @@ const root = createRoot(host);
 
 function collect(layout: DocViewerLayout, doc: Doc): Result {
   // Re-measure the measuring copy the way DocViewer does, for the packer input.
-  const m = measure(host.querySelector<HTMLElement>("[data-lw-measure]")!, Array.isArray(doc.blocks) ? doc.blocks : []);
-  const toPt = (h: Record<string, number>) => ({ default: h.default! / PX_PER_PT, first: h.first! / PX_PER_PT, even: h.even! / PX_PER_PT });
-  const boxes = pageBodyBoxes(pageGeometry(doc), doc.page, { header: toPt(m.bands.header), footer: toPt(m.bands.footer) });
-  const options: PackOptions = {
-    pageHeight: boxes.odd.height * PX_PER_PT,
-    firstPageHeight: boxes.first.height * PX_PER_PT,
-    evenPageHeight: boxes.even.height * PX_PER_PT,
-    footnoteSeparator: m.footnoteSeparator,
-  };
+  const stretches = docStretches(doc);
+  const m = measure(host.querySelector<HTMLElement>("[data-lw-measure]")!, Array.isArray(doc.blocks) ? doc.blocks : [], stretches.length);
+  const { items, options } = packInput(stretches, m);
   const pages = Array.from(host.querySelectorAll<HTMLElement>("[data-page]"));
   const pageBlocks = pages.map((p) =>
     Array.from(p.querySelectorAll<HTMLElement>("[data-lw-content] > [data-block]")).map((b) => Number(b.dataset.block!.slice(1))),
@@ -82,7 +76,7 @@ function collect(layout: DocViewerLayout, doc: Doc): Result {
     bands,
     breakpoints,
     rows: rowHeights,
-    items: m.items,
+    items,
     options,
   };
 }

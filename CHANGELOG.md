@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Mixed page orientation.** A `pageBreak` carrying `page` changes the page from there on: each page is drawn at its own size and margins, with its own bands, and its text measured at its own width. `margins` merge side by side, every other key is replaced whole, `firstHeader` / `firstFooter` are never inherited and on a break mean the first page after it, and even bands follow the page number. `{section}` counts the stretches and `{sectionpages}` is the page count of the current one, as Word's `SECTION` and `SECTIONPAGES`. One scale serves every page, from the widest.
+- `docStretches()`, `blockStretches()`, `packInput()`, `pageClassIn()`. `paginate()` takes a `stretch` on a break item and `firstEvenPageHeight`; `pageCapacity()` a stretch's first page index.
+- `onLayout` reports `pageSizes` when the document's page changes partway. `pageWidth` and `pageHeight` stay the first page's.
+
+### Changed
+
+- The notice no longer fires for a `page` on a top-level break, because that is drawn now. It still fires for what the writers refuse (a nested `page`, a background on a break, page keys straight on a break, a top-level `sections`), in new words. **Consumer action:** none, unless you compared `LAYOUT_NOTICE`'s text.
+- `tests/fixtures/viewer-agreement.json` has a tenth case, recorded in headless Chromium; the first nine did not move.
+
 ## [0.4.1] - 2026-11-03
 
 **What you must do: nothing.** A document with a `colSpan` of 1000 or less draws

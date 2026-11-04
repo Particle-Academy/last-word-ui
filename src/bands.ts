@@ -22,8 +22,12 @@ import type { Band, BlocksBand, Page } from "./types";
 export type BandKind = "header" | "footer";
 /** Which of a kind's bands applies: the default, the first-page or the even-page one. */
 export type BandSlot = "default" | "first" | "even";
-/** Page 1, an even page, or an odd page after the first. */
-export type PageClass = "first" | "even" | "odd";
+/**
+ * Page 1 or a stretch's first page, an even page, or an odd page after the first.
+ * `firstEven` is a stretch's first page on an even number: its first band when it has
+ * one, else its even band, per kind.
+ */
+export type PageClass = "first" | "even" | "odd" | "firstEven";
 
 /** Measured band heights per kind and slot, in any one unit; 0 when absent or blank. */
 export type BandHeights = Record<BandKind, Record<BandSlot, number>>;
@@ -37,8 +41,14 @@ const VARIANT_KEY: Record<BandKind, Record<Exclude<BandSlot, "default">, keyof P
 
 /** The class of the page at 0-based `index`. */
 export function pageClass(index: number): PageClass {
-  if (index === 0) return "first";
-  return index % 2 === 1 ? "even" : "odd";
+  return pageClassIn(index, 0);
+}
+
+/** The class of the page at 0-based `index`, in a stretch whose first page is at `start`. */
+export function pageClassIn(index: number, start: number): PageClass {
+  const even = index % 2 === 1;
+  if (index === start) return even ? "firstEven" : "first";
+  return even ? "even" : "odd";
 }
 
 const isBandObject = (v: unknown): v is Band | BlocksBand => !!v && typeof v === "object" && !Array.isArray(v);
@@ -53,8 +63,8 @@ export function slotBand(page: Page | undefined, kind: BandKind, slot: BandSlot)
 
 /** The slot a page class draws for one kind: its variant when that is set, else the default. */
 export function bandSlot(page: Page | undefined, kind: BandKind, cls: PageClass): BandSlot {
-  if (cls === "first" && slotBand(page, kind, "first") !== undefined) return "first";
-  if (cls === "even" && slotBand(page, kind, "even") !== undefined) return "even";
+  if ((cls === "first" || cls === "firstEven") && slotBand(page, kind, "first") !== undefined) return "first";
+  if ((cls === "even" || cls === "firstEven") && slotBand(page, kind, "even") !== undefined) return "even";
   return "default";
 }
 
@@ -62,8 +72,8 @@ export function bandSlot(page: Page | undefined, kind: BandKind, cls: PageClass)
  * The band the page at 0-based `index` draws for `kind`, or null when it
  * draws none (no band, or a blank variant).
  */
-export function pageBand(page: Page | undefined, kind: BandKind, index: number): Band | BlocksBand | null {
-  const band = slotBand(page, kind, bandSlot(page, kind, pageClass(index)));
+export function pageBand(page: Page | undefined, kind: BandKind, index: number, start = 0): Band | BlocksBand | null {
+  const band = slotBand(page, kind, bandSlot(page, kind, pageClassIn(index, start)));
   return hasBand(band) ? band : null;
 }
 
@@ -78,5 +88,5 @@ export function pageBodyBoxes(g: PageGeometry, page: Page | undefined, heights: 
     return hasBand(slotBand(page, kind, slot)) ? Math.max(0, heights[kind][slot] || 0) : 0;
   };
   const box = (cls: PageClass) => bodyBox(g, height("header", cls), height("footer", cls));
-  return { first: box("first"), even: box("even"), odd: box("odd") };
+  return { first: box("first"), even: box("even"), odd: box("odd"), firstEven: box("firstEven") };
 }

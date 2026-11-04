@@ -1,7 +1,6 @@
 /**
- * Mixed page orientation, stage 1: the viewer draws one page setup, so a document
- * asking for more keeps drawing and says it is not shown. Per-page geometry is
- * stage 2 (.ai/plans/mixed-page-orientation.md).
+ * Page settings set where they don't apply: a document keeps drawing and says they are
+ * not shown. A `page` on a top-level break IS shown: see mixed-pages.test.tsx.
  */
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -27,11 +26,11 @@ afterEach(() => {
 const para = (text: string) => ({ type: "paragraph" as const, runs: [{ text }] });
 /** Past the local types on purpose: these keys arrive from other writers' JSON. */
 const asDoc = (doc: unknown) => doc as Doc;
-const withPage = asDoc({ blocks: [para("one"), { type: "pageBreak", page: { orientation: "landscape" } }, para("two")] });
+const withPage = asDoc({ blocks: [para("one"), { type: "quote", blocks: [{ type: "pageBreak", page: { orientation: "landscape" } }] }, { type: "pageBreak" }, para("two")] });
 
 const notice = () => host.querySelector<HTMLElement>("[data-lw-layout-notice]");
 const WORDS =
-  "Mixed page orientation isn't shown yet. This document asks for different page settings partway through; every page here uses the document's one page setup.";
+  "Some page settings in this document aren't shown. It sets them somewhere they don't apply: on a page break directly, in a quote or a table cell, or under a sections key.";
 
 it("exports the words fancy-docs uses", () => {
   expect(LAYOUT_NOTICE).toBe(WORDS);
@@ -49,9 +48,9 @@ describe("unshownLayout", () => {
     expect(unshownLayout(asDoc({ blocks: [null, 3, { type: "quote", blocks: "nope" }, { type: "table", rows: [null, { cells: [null] }] }] }))).toEqual([]);
   });
 
-  it("names pageBreak.page, the empty one too", () => {
-    expect(unshownLayout(withPage)).toEqual(["/blocks/1/page"]);
-    expect(unshownLayout(asDoc({ blocks: [{ type: "pageBreak", page: {} }] }))).toEqual(["/blocks/0/page"]);
+  it("names a nested pageBreak.page, and not a top-level one, the empty one too", () => {
+    expect(unshownLayout(withPage)).toEqual(["/blocks/1/blocks/0/page"]);
+    expect(unshownLayout(asDoc({ blocks: [{ type: "pageBreak", page: {} }] }))).toEqual([]);
   });
 
   it.each(["size", "orientation", "margins", "header", "footer", "firstHeader", "firstFooter", "evenHeader", "evenFooter", "background", "border"])(
@@ -92,7 +91,7 @@ describe("DocViewer", () => {
   });
 
   it.each([
-    ["pageBreak.page", withPage],
+    ["a nested pageBreak.page", asDoc({ blocks: [para("one"), { type: "quote", blocks: [{ type: "pageBreak", page: {} }] }, { type: "pageBreak" }, para("two")] })],
     ["a near-miss key", asDoc({ blocks: [para("one"), { type: "pageBreak", orientation: "landscape" }, para("two")] })],
     ["top-level sections", asDoc({ sections: [{}], blocks: [para("one"), { type: "pageBreak" }, para("two")] })],
   ])("keeps drawing with a visible notice: %s", (_name, doc) => {
@@ -130,7 +129,7 @@ describe("DocViewer", () => {
 
     expect(onLayout).toHaveBeenCalled();
     const layout = onLayout.mock.calls.at(-1)![0];
-    expect(layout.notShown).toEqual(["/blocks/1/page"]);
+    expect(layout.notShown).toEqual(["/blocks/1/blocks/0/page"]);
     expect(layout.pages).toBe(2);
     expect(() => JSON.stringify(layout)).not.toThrow();
   });

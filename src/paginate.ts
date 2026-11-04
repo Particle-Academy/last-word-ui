@@ -54,6 +54,12 @@ export interface TableItem {
 
 export interface BreakItem {
   type: "break";
+  /**
+   * This break starts a run of pages of another shape, and these are its heights.
+   * `firstPageHeight` is its first page when that page is odd and
+   * `firstEvenPageHeight` when even: the pages before it decide which.
+   */
+  stretch?: Pick<PackOptions, "pageHeight" | "firstPageHeight" | "firstEvenPageHeight" | "evenPageHeight">;
 }
 
 export type PackItem = BlockItem | TableItem | BreakItem;
@@ -74,6 +80,12 @@ export interface PackOptions {
    * `pageHeight` when absent. Page 1 is odd, so it never takes this.
    */
   evenPageHeight?: number;
+  /**
+   * The body height of a stretch's first page when that page is even. Page 1 is
+   * odd, so the first stretch never takes it. `firstPageHeight` does not stand in:
+   * absent, the page is an ordinary even page.
+   */
+  firstEvenPageHeight?: number;
   /**
    * Height of the separator rule above a page's footnotes, reserved once on
    * any page that holds at least one note. 0 when absent.
@@ -117,6 +129,8 @@ export interface PageLayout {
   used: number;
   /** The body height this page had to fill (`pageCapacity()` for its index). */
   capacity: number;
+  /** Which stretch it is in, 0-based. Absent in the first. */
+  stretch?: number;
 }
 
 const EPS = 1e-6;
@@ -124,21 +138,29 @@ const EPS = 1e-6;
 const positive = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v > 0;
 
 /**
- * The body height of the page at 0-based `index`: page 1 takes
- * `firstPageHeight`, even pages (odd indices) `evenPageHeight`, the rest
- * `pageHeight`. A variant that is absent, non-finite or not positive falls
- * back to `pageHeight`. At least 1, so a page always makes progress.
+ * The body height of the page at 0-based `index`, in a stretch whose first page is at
+ * `start`: that first page takes `firstPageHeight` (`firstEvenPageHeight` on an even
+ * page), even pages (odd indices) `evenPageHeight`, the rest `pageHeight`. A variant
+ * that is absent, non-finite or not positive falls back. At least 1, so a page always
+ * makes progress.
  */
-export function pageCapacity(options: PackOptions, index: number): number {
+export function pageCapacity(options: PackOptions, index: number, start = 0): number {
   const base = Math.max(1, positive(options.pageHeight) ? options.pageHeight : 1);
-  if (index === 0) return positive(options.firstPageHeight) ? Math.max(1, options.firstPageHeight) : base;
-  if (index % 2 === 1) return positive(options.evenPageHeight) ? Math.max(1, options.evenPageHeight) : base;
+  const even = index % 2 === 1;
+  if (index === start) {
+    const first = even ? options.firstEvenPageHeight : options.firstPageHeight;
+    if (positive(first)) return Math.max(1, first);
+  }
+  if (even) return positive(options.evenPageHeight) ? Math.max(1, options.evenPageHeight) : base;
   return base;
 }
 
-export function paginate(items: PackItem[], options: PackOptions): PageLayout[] {
+export function paginate(items: PackItem[], initial: PackOptions): PageLayout[] {
   // Every rule below works at the capacity of the page it is filling; `cap`
-  // is re-read on each new page.
+  // is re-read on each new page. A break with a stretch swaps the heights.
+  let options = initial;
+  let stretchStart = 0;
+  let stretch = 0;
   let cap = pageCapacity(options, 0);
   const sep = Math.max(0, options.footnoteSeparator ?? 0);
   const pages: PageLayout[] = [];
@@ -149,8 +171,8 @@ export function paginate(items: PackItem[], options: PackOptions): PageLayout[] 
   let noteHeights = 0; // sum of note heights on the page
 
   const newPage = (): void => {
-    cap = pageCapacity(options, pages.length);
-    page = { index: pages.length, fragments: [], footnotes: [], used: 0, capacity: cap };
+    cap = pageCapacity(options, pages.length, stretchStart);
+    page = { index: pages.length, fragments: [], footnotes: [], used: 0, capacity: cap, ...(stretch > 0 ? { stretch } : {}) };
     pages.push(page);
     content = 0;
     noteHeights = 0;
@@ -175,6 +197,11 @@ export function paginate(items: PackItem[], options: PackOptions): PageLayout[] 
 
   items.forEach((item, index) => {
     if (item.type === "break") {
+      if (item.stretch) {
+        options = { footnoteSeparator: options.footnoteSeparator, ...item.stretch };
+        stretchStart = pages.length;
+        stretch++;
+      }
       newPage();
       return;
     }
@@ -235,7 +262,7 @@ export function paginate(items: PackItem[], options: PackOptions): PageLayout[] 
       const next = items[index + 1];
       const meaningful = next !== undefined && next.type !== "break";
       // Move the chain only if the page it would move to can hold it.
-      const nextCap = pageCapacity(options, page.index + 1);
+      const nextCap = pageCapacity(options, page.index + 1, stretchStart);
       if (meaningful && chain <= nextCap + EPS && !fits(chain, notesIn(item, 0, height, true))) newPage();
     }
 

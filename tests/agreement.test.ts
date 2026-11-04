@@ -16,7 +16,7 @@ import type { Doc } from "../src/types";
  * still produce the pages it produced. A packer change that moves a break
  * fails here, and is then a change both sides must make together.
  */
-const SHA256 = "c262515fc734b352f4d074e0f8238951f6a3a7b32fb7eed1b2dcd5256ca18131";
+const SHA256 = "6d1ea6f675d289ddc927fd8d27ae509373ef4fe10c10ab03eafec58c0a5eaa53";
 
 interface Case {
   id: string;

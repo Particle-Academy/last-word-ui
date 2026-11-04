@@ -12,8 +12,9 @@ measure.ts      DOM rects -> PackItem[]       (the ONLY browser-dependent step)
 paginate.ts     PackItem[] -> PageLayout[]    (pure; every pagination rule is a unit test)
 render.tsx      block / run / table / band / footnote renderers (react-fancy primitives)
 geometry.ts     paper sizes, pageMargins() (THE place defaults live), bodyBox()
+stretches.ts    runs of pages of one setup (pageBreak.page): their geometry, and what the packer is given
 bands.ts        which header/footer each page draws (default / first / even), body box per page class
-layout-notice.ts page layout the doc asks for and the viewer ignores (pageBreak.page, near-miss keys, sections), and the notice's words
+layout-notice.ts page settings set where they don't apply (a nested page, near-miss keys, sections), and the notice's words
 fields.ts       band field tokens and the Word date-time picture formatter (pure)
 footnotes.ts    numbering, keyed by Run identity
 table-grid.ts   HTML-style spans -> grid columns, joinPrevious, header rows
@@ -48,6 +49,12 @@ demo/agreement  the harness that records the viewer goldens for last-word's layo
   the page it is filling; a keep-with-next chain moves only if the NEXT
   page's capacity holds it. Band selection lives in `bands.ts` alone: the
   measuring copy measures every slot, the pages draw `pageBand()`.
+- **A `pageBreak` carrying `page` starts a stretch.** Geometry, margins, bands and
+  body boxes are per stretch; a block and a footnote measure at their stretch's width.
+  `paginate()` keeps one list of items: the break carries the next stretch's heights,
+  and a stretch's first page on an even number has its own class, `firstEven`.
+  `{section}` counts stretches and `{sectionpages}` is the pages of this one. One scale
+  serves every page, from the widest.
 - **Field tokens are band-only and text-only.** `substituteFields` returns a
   string that renders as a React text node. Band fields come from one
   `docFields` object shared by the measuring copy and the pages.

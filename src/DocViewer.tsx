@@ -1,12 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Callout } from "@particle-academy/react-fancy";
-import { BAND_SLOTS, bandSlot, pageBand, pageBodyBoxes, pageClass, slotBand, type BandKind, type BandSlot, type PageClass } from "./bands";
+import { BAND_SLOTS, bandSlot, pageBand, pageClassIn, slotBand, type BandKind, type PageClass } from "./bands";
 import { resolveNow, type PageFields } from "./fields";
 import { numberFootnotes, type FootnoteNumbering } from "./footnotes";
 import { LAYOUT_NOTICE, unshownLayout } from "./layout-notice";
-import { PX_PER_PT, pageGeometry, type BodyBox, type PageGeometry } from "./geometry";
+import { PX_PER_PT, type BodyBox, type PageGeometry } from "./geometry";
 import { blockId, measure } from "./measure";
 import { paginate, type Fragment, type PageLayout } from "./paginate";
+import { blockStretches, docStretches, packInput, type Stretch } from "./stretches";
 import {
   BandView,
   BlockView,
@@ -21,14 +22,16 @@ import { carlitoUrls } from "./font-urls";
 import { carlitoFaces, fontFaceCss } from "./fonts";
 import { DEFAULT_SIZE, DEFAULT_SPACE_AFTER, FOOTNOTE_SEPARATOR_PT, num, pt, px, typography as typographyStyle } from "./style";
 import { VIEWER_CSS } from "./viewer-css";
-import type { Block, Doc, Page, TableBlock } from "./types";
+import type { Block, Doc, TableBlock } from "./types";
 
 export interface DocViewerLayout {
   /** Number of pages the document laid out to. */
   pages: number;
-  /** Page size in points, orientation applied. */
+  /** The first page's size in points, orientation applied. */
   pageWidth: number;
   pageHeight: number;
+  /** Every page's size, when the document's page changes partway. */
+  pageSizes?: Array<{ width: number; height: number }>;
   /** The scale the pages are drawn at. */
   scale: number;
   /**
@@ -41,7 +44,7 @@ export interface DocViewerLayout {
   font: ViewerFont;
   /**
    * JSON Pointers to page layout the document asks for and this viewer does not
-   * show (`pageBreak.page`, page keys straight on a break, a top-level `sections`).
+   * show (`page` on a nested break, page keys straight on a break, a top-level `sections`).
    * Absent when there is none. The visible notice says the same thing.
    */
   notShown?: string[];
@@ -107,8 +110,8 @@ export interface DocViewerProps {
 
 interface Layout {
   pages: PageLayout[];
-  /** The body box of each page class: its bands can differ, so its body can too. */
-  boxes: Record<PageClass, BodyBox>;
+  /** Per stretch, the body box of each page class: its bands can differ, so its body can too. */
+  boxes: Record<PageClass, BodyBox>[];
   /** Measured block heights (px), by item index, to tell a whole block from a fragment. */
   heights: number[];
 }
@@ -123,6 +126,8 @@ interface Layout {
  * document order); each footnote `data-footnote`; bands `data-lw-band`, with
  * `data-lw-band-variant` naming the one drawn (`default`, `first`, `even`);
  * `data-lw-layout-notice` when the document asks for page layout it does not show.
+ * A `pageBreak` carrying `page` changes the page from there on, each page drawn and
+ * its text measured at its own size.
  *
  * Header and footer text takes field tokens -- `{page}`, `{pages}`,
  * `{section}`, `{sectionpages}`, `{author}`, `{title}`, `{filename}`, `{date}`,
@@ -143,10 +148,20 @@ export function DocViewer({
   className,
   style,
 }: DocViewerProps) {
-  const geometry = useMemo(() => pageGeometry(doc), [doc]);
+  const stretches = useMemo(() => docStretches(doc), [doc]);
+  const geometry = stretches[0]!.geometry;
   const numbering = useMemo(() => numberFootnotes(doc), [doc]);
   const blocks: Block[] = useMemo(() => (Array.isArray(doc?.blocks) ? doc.blocks : []), [doc]);
-  const page: Page | undefined = doc?.page && typeof doc.page === "object" ? doc.page : undefined;
+  const blockStretch = useMemo(() => blockStretches(stretches, blocks.length), [stretches, blocks]);
+  // Which stretch each footnote is in: it sets at the width of the page holding its mark.
+  const noteStretch = useMemo(() => {
+    const out = new Map<number, number>();
+    let id = 0;
+    blocks.forEach((block, i) => {
+      for (let n = numberFootnotes({ blocks: [block] } as Doc).notes.length; n > 0; n--) out.set(++id, blockStretch[i]!);
+    });
+    return out;
+  }, [blocks, blockStretch]);
   // Keyed by value, so a parent passing a fresh Date each render does not re-lay out.
   const nowKey = now instanceof Date ? now.getTime() : now;
   const nowDate = useMemo(() => resolveNow(nowKey === undefined ? undefined : typeof nowKey === "number" ? new Date(nowKey) : nowKey), [nowKey]);
@@ -156,7 +171,6 @@ export function DocViewer({
   // measuring copy and the pages, so both render the same text.
   const docFields: Omit<PageFields, "page" | "pages"> = useMemo(
     () => ({
-      section: 1,
       ...(typeof author === "string" ? { author } : {}),
       ...(typeof title === "string" ? { title } : {}),
       ...(typeof filename === "string" ? { filename } : {}),
@@ -186,6 +200,8 @@ export function DocViewer({
     }),
     [numbering, doc, geometry],
   );
+  // The context a stretch's blocks render in: the same marks, its own text width.
+  const ctxOf = (k: number): RenderContext => ({ ...ctx, contentWidth: stretches[k]!.geometry.contentWidth });
 
   useEffect(() => {
     const state = initialFontState(faces);
@@ -207,23 +223,13 @@ export function DocViewer({
   useLayoutEffect(() => {
     const el = measureRef.current;
     if (!el || font === "pending") return;
-    const m = measure(el, blocks);
-    const toPt = (h: Record<BandSlot, number>): Record<BandSlot, number> => ({
-      default: h.default / PX_PER_PT,
-      first: h.first / PX_PER_PT,
-      even: h.even / PX_PER_PT,
-    });
+    const m = measure(el, blocks, stretches.length);
     // One body box per page class, from the bands that class actually draws.
-    const boxes = pageBodyBoxes(geometry, page, { header: toPt(m.bands.header), footer: toPt(m.bands.footer) });
-    const pages = paginate(m.items, {
-      pageHeight: boxes.odd.height * PX_PER_PT,
-      firstPageHeight: boxes.first.height * PX_PER_PT,
-      evenPageHeight: boxes.even.height * PX_PER_PT,
-      footnoteSeparator: m.footnoteSeparator,
-    });
+    const input = packInput(stretches, m);
+    const pages = paginate(input.items, input.options);
     const heights = m.items.map((it) => (it.type === "block" ? it.height : 0));
-    setLayout({ pages, boxes, heights });
-  }, [blocks, geometry, numbering, fontEpoch, page, docFields, font]);
+    setLayout({ pages, boxes: input.boxes, heights });
+  }, [blocks, stretches, numbering, fontEpoch, docFields, font]);
 
   // Web fonts change line breaks; lay out again once they have loaded.
   useEffect(() => {
@@ -248,7 +254,8 @@ export function DocViewer({
     return () => ro.disconnect();
   }, []);
 
-  const pageWpx = geometry.width * PX_PER_PT;
+  // One scale for every page, so a landscape sheet fits and the text stays one size.
+  const pageWpx = Math.max(...stretches.map((s) => s.geometry.width)) * PX_PER_PT;
   const scale =
     typeof fixedScale === "number" && fixedScale > 0
       ? fixedScale
@@ -265,12 +272,15 @@ export function DocViewer({
         pages: layout.pages.length,
         pageWidth: geometry.width,
         pageHeight: geometry.height,
+        ...(stretches.length > 1
+          ? { pageSizes: layout.pages.map((p) => ({ width: stretches[p.stretch ?? 0]!.geometry.width, height: stretches[p.stretch ?? 0]!.geometry.height })) }
+          : {}),
         scale,
         font,
         ...(notShown.length > 0 ? { notShown } : {}),
       });
     }
-  }, [layout, geometry, scale, onLayout, font, notShown]);
+  }, [layout, geometry, stretches, scale, onLayout, font, notShown]);
 
   const typography: CSSProperties = typographyStyle(doc?.defaultFont, ctx.size);
   const ready = layout !== null && font !== "pending";
@@ -319,31 +329,48 @@ export function DocViewer({
         }}
       >
         <RenderCtx.Provider value={ctx}>
-          {(["header", "footer"] as const).flatMap((kind) =>
-            BAND_SLOTS.map((slot) => {
-              const band = slotBand(page, kind, slot);
-              if (!hasBand(band)) return null;
-              // Measured as a page of its class draws it: page 1, or page 2 for an even band.
-              const n = slot === "even" ? 2 : 1;
-              return (
-                <div key={`${kind}:${slot}`} data-lw-measure-band={`${kind}:${slot}`}>
-                  <RenderCtx.Provider value={{ ...ctx, fields: { ...docFields, page: n, pages: n } }}>
-                    <BandView band={band} />
-                  </RenderCtx.Provider>
-                </div>
-              );
-            }),
+          {stretches.flatMap((stretch, k) =>
+            (["header", "footer"] as const).flatMap((kind) =>
+              BAND_SLOTS.map((slot) => {
+                const band = slotBand(stretch.page, kind, slot);
+                if (!hasBand(band)) return null;
+                // Measured as a page of its class draws it: page 1, or page 2 for an even band.
+                const n = slot === "even" ? 2 : 1;
+                const at = k === 0 ? `${kind}:${slot}` : `${k + 1}:${kind}:${slot}`;
+                return (
+                  <div key={at} data-lw-measure-band={at} style={stretches.length > 1 ? { width: pt(stretch.geometry.contentWidth) } : undefined}>
+                    <RenderCtx.Provider value={{ ...ctxOf(k), fields: { ...docFields, section: k + 1, page: n, pages: n } }}>
+                      <BandView band={band} />
+                    </RenderCtx.Provider>
+                  </div>
+                );
+              }),
+            ),
           )}
-          {blocks.map((b, i) => (
-            <div key={i} data-lw-measure-block={i} style={{ display: "flow-root" }}>
-              <BlockView block={b} />
-            </div>
-          ))}
-          {numbering.notes.map((n) => (
-            <div key={n.id} data-lw-measure-footnote={n.id}>
-              <FootnoteView id={n.id} footnote={n.footnote} />
-            </div>
-          ))}
+          {blocks.map((b, i) => {
+            const k = blockStretch[i]!;
+            return (
+              <div
+                key={i}
+                data-lw-measure-block={i}
+                style={{ display: "flow-root", ...(stretches.length > 1 ? { width: pt(stretches[k]!.geometry.contentWidth) } : {}) }}
+              >
+                <RenderCtx.Provider value={ctxOf(k)}>
+                  <BlockView block={b} />
+                </RenderCtx.Provider>
+              </div>
+            );
+          })}
+          {numbering.notes.map((n) => {
+            const k = noteStretch.get(n.id) ?? 0;
+            return (
+              <div key={n.id} data-lw-measure-footnote={n.id} style={stretches.length > 1 ? { width: pt(stretches[k]!.geometry.contentWidth) } : undefined}>
+                <RenderCtx.Provider value={ctxOf(k)}>
+                  <FootnoteView id={n.id} footnote={n.footnote} />
+                </RenderCtx.Provider>
+              </div>
+            );
+          })}
           {numbering.notes.length > 0 && (
             <div data-lw-measure-separator="">
               <FootnoteSeparator height={pt(FOOTNOTE_SEPARATOR_PT)} />
@@ -354,23 +381,30 @@ export function DocViewer({
 
       {ready && layout && (
         <div data-lw-page-stack="" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap }}>
-          {layout.pages.map((p) => (
-            <PageView
-              key={p.index}
-              page={p}
-              pages={layout.pages.length}
-              geometry={geometry}
-              box={layout.boxes[pageClass(p.index)]}
-              scale={scale}
-              typography={typography}
-              ctx={ctx}
-              docPage={page}
-              docFields={docFields}
-              numbering={numbering}
-              blocks={blocks}
-              heights={layout.heights}
-            />
-          ))}
+          {layout.pages.map((p) => {
+            const k = p.stretch ?? 0;
+            const inStretch = layout.pages.filter((x) => (x.stretch ?? 0) === k);
+            const start = inStretch[0]!.index;
+            return (
+              <PageView
+                key={p.index}
+                page={p}
+                pages={layout.pages.length}
+                section={k + 1}
+                sectionPages={inStretch.length}
+                start={start}
+                stretch={stretches[k]!}
+                box={layout.boxes[k]![pageClassIn(p.index, start)]}
+                scale={scale}
+                typography={typography}
+                ctx={ctxOf(k)}
+                docFields={docFields}
+                numbering={numbering}
+                blocks={blocks}
+                heights={layout.heights}
+              />
+            );
+          })}
         </div>
       )}
     </div>
@@ -380,25 +414,29 @@ export function DocViewer({
 interface PageViewProps {
   page: PageLayout;
   pages: number;
-  geometry: PageGeometry;
+  section: number;
+  sectionPages: number;
+  /** The index of the first page of this page's stretch. */
+  start: number;
+  stretch: Stretch;
   box: BodyBox;
   scale: number;
   typography: CSSProperties;
   ctx: RenderContext;
-  docPage: Page | undefined;
   docFields: Omit<PageFields, "page" | "pages">;
   numbering: FootnoteNumbering;
   blocks: Block[];
   heights: number[];
 }
 
-function PageView({ page, pages, geometry, box, scale, typography, ctx, docPage, docFields, numbering, blocks, heights }: PageViewProps) {
+function PageView({ page, pages, section, sectionPages, start, stretch, box, scale, typography, ctx, docFields, numbering, blocks, heights }: PageViewProps) {
   const n = page.index + 1;
-  const g = geometry;
-  const bandCtx = { ...ctx, fields: { ...docFields, page: n, pages, sectionPages: pages } };
-  const cls = pageClass(page.index);
-  const header = pageBand(docPage, "header", page.index);
-  const footer = pageBand(docPage, "footer", page.index);
+  const g: PageGeometry = stretch.geometry;
+  const docPage = stretch.page;
+  const bandCtx = { ...ctx, fields: { ...docFields, page: n, pages, section, sectionPages } };
+  const cls = pageClassIn(page.index, start);
+  const header = pageBand(docPage, "header", page.index, start);
+  const footer = pageBand(docPage, "footer", page.index, start);
   const variant = (kind: BandKind) => bandSlot(docPage, kind, cls);
   const notes = page.footnotes
     .map((fid) => numbering.notes.find((x) => x.id === fid))

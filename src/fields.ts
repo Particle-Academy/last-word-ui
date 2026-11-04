@@ -9,12 +9,9 @@ export interface PageFields {
   /** 1-based. */
   page: number;
   pages: number;
-  /**
-   * `{section}`. A last-word Doc is ONE section, so this is 1 unless a caller
-   * says otherwise.
-   */
+  /** `{section}`: which stretch the page is in, 1-based, as Word's SECTION. 1 when absent. */
   section?: number;
-  /** `{sectionpages}`. The Doc is one section, so the page total when absent. */
+  /** `{sectionpages}`: the pages of that stretch, as Word's SECTIONPAGES. The page total when absent. */
   sectionPages?: number;
   /** `{author}`: `doc.meta.author`. Empty when absent. */
   author?: string;

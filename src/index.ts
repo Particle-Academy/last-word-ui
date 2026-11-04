@@ -4,7 +4,9 @@ export { CARLITO_FAMILY, CARLITO_FACES, carlitoFaces, fontFaceCss } from "./font
 export { docFromReader } from "./from-reader";
 export { LAYOUT_NOTICE, unshownLayout } from "./layout-notice";
 export { paginate, pageCapacity } from "./paginate";
-export { pageBand, pageClass, bandSlot, pageBodyBoxes } from "./bands";
+export { docStretches, blockStretches, packInput } from "./stretches";
+export type { Stretch, PackInput } from "./stretches";
+export { pageBand, pageClass, pageClassIn, bandSlot, pageBodyBoxes } from "./bands";
 export type { BandKind, BandSlot, PageClass, BandHeights } from "./bands";
 export type {
   PackItem,

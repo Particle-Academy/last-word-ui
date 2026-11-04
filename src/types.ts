@@ -171,6 +171,8 @@ export interface ChartBlock {
 
 export interface PageBreakBlock {
   type: "pageBreak";
+  /** Change the page from here on: see `docStretches()`. */
+  page?: Page;
 }
 
 export interface HrBlock {
