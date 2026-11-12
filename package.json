@@ -1,6 +1,6 @@
 {
   "name": "@particle-academy/last-word-ui",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A read-only, paged React viewer for a last-word Doc: each page at its paper size, automatic breaks by content height, header and footer bands with live page numbers, footnotes at the page foot, and Word-faithful tables. Scales to fit, never reflows.",
   "keywords": [
     "docx",
@@ -55,9 +55,15 @@
     "prepublishOnly": "npm run lint && npm test && npm run build"
   },
   "peerDependencies": {
+    "@particle-academy/fancy-echarts": ">=6.1.0 <7.0.0",
     "@particle-academy/react-fancy": ">=5.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@particle-academy/fancy-echarts": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@particle-academy/last-word": "^0.11.0",

@@ -10,8 +10,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-11
+
+**What you must do:** to see charts drawn, install the optional peer:
+`npm install @particle-academy/fancy-echarts echarts`. Without it nothing
+breaks and nothing moves: charts stay sized placeholders, as in 0.5.0, now with
+a development warning. Page breaks do not move either way: a chart's box is the
+same size as before.
+
+### Fixed
+
+- **Charts draw as charts** (last-word-ui#1). Every chart block from
+  last-word's native charts drew as a dashed "Chart: <title>" placeholder,
+  although the `.docx` was correct. The block's ECharts `option` is now drawn
+  by fancy-echarts' `EChart` at the block's size, inside the page: column, bar,
+  line and pie. The sheet is white paper in every colour scheme, so the chart
+  gets an explicit light theme (left unset, fancy-echarts picks its dark theme
+  from the OS and draws light text on the white page), a transparent
+  background, the SVG renderer (sharp under the page scale and in print) and no
+  animation. The block's own keys win over each default.
+
+### Added
+
+- `@particle-academy/fancy-echarts` (`>=6.1.0 <7.0.0`) as an **optional** peer.
+  It is imported dynamically on first use, in the browser only, so a document
+  with no charts loads no charting engine and server rendering draws the empty,
+  sized box with no hydration mismatch.
+- `renderChart` prop on `DocViewer`: draw a chart yourself, given
+  `{ block, option, width, height, title }`. Return `undefined` to leave a
+  chart to the default.
+- `pageChartOption()`, `OFFICE_PALETTE`, and the `ChartRenderArgs` and
+  `RenderChart` types.
+- Chart blocks carry `data-lw-chart`. Without fancy-echarts, a placeholder
+  still carries `data-lw-chart-placeholder`, and a development warning (once)
+  names the package to install and the `renderChart` alternative.
+
 ### Changed
 
+- The hidden measuring copy draws a chart's box only, never the chart, so a
+  chart is never initialised twice. The box is the size it was, so page breaks
+  do not move.
 - **Releases need a lab-run certificate.** `publish.yml` gains a read-only
   `lab-certificate` job that every publishing job needs: a tag is published only
   when the fancy-labs lab has certified that exact version and commit. Consumers

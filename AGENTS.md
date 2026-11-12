@@ -11,6 +11,7 @@ DocViewer.tsx   renders a hidden measuring copy, measures it, paginates, draws p
 measure.ts      DOM rects -> PackItem[]       (the ONLY browser-dependent step)
 paginate.ts     PackItem[] -> PageLayout[]    (pure; every pagination rule is a unit test)
 render.tsx      block / run / table / band / footnote renderers (react-fancy primitives)
+chart.tsx       chart blocks: the optional fancy-echarts peer (dynamic import), pageChartOption(), renderChart
 geometry.ts     paper sizes, pageMargins() (THE place defaults live), bodyBox()
 stretches.ts    runs of pages of one setup (pageBreak.page): their geometry, and what the packer is given
 bands.ts        which header/footer each page draws (default / first / even), body box per page class
@@ -113,6 +114,12 @@ devDependency only.
 - jsdom has no layout: every height is 0, so jsdom tests cover structure,
   styling and handles, and the packer tests cover breaks. Real breaks need the
   browser (`npm run demo`).
+- fancy-echarts is an optional peer and is NOT installed here (it would bring
+  echarts). `vitest.config.ts` stubs it to throw on load, as an app's Vite does
+  for a missing optional peer, so the suite runs the absent path for real;
+  `tests/chart.test.tsx` mocks it to check what `EChart` is given. The chart's
+  box is drawn in the measuring copy too, never the chart (`ctx.measuring`).
+  Keep `ChartBox` the same size on both sides, or every break moves.
 - react-fancy's `Table` puts only `Table.Head`/`Table.Body` inside its
   `<table>`, so there is no `<colgroup>`. Column widths come from a zero-height
   sizer row (`data-lw-sizer`) plus `table-layout: fixed` in the viewer CSS.

@@ -1,5 +1,6 @@
 import { createContext, useContext, type CSSProperties, type ReactNode } from "react";
 import { Heading, ImageViewer, Separator, Table, Text } from "@particle-academy/react-fancy";
+import { ChartBox, type RenderChart } from "./chart";
 import { substituteFields, type PageFields } from "./fields";
 import { resolveImageSize } from "./image-size";
 import { safeHref } from "./links";
@@ -54,6 +55,10 @@ export interface RenderContext {
   contentWidth: number;
   /** Runs draw bold (a table header row). */
   bold?: boolean;
+  /** The hidden measuring copy: a chart is only its sized box there, never drawn. */
+  measuring?: boolean;
+  /** DocViewer's `renderChart`. */
+  renderChart?: RenderChart;
 }
 
 const EMPTY_MARKS = new Map<Run, number>();
@@ -202,7 +207,7 @@ export function BlockView({ block }: { block: Block }) {
     case "image":
       return <ImageView block={block} />;
     case "chart":
-      return <ChartPlaceholder block={block} />;
+      return <ChartView block={block} />;
     case "hr":
       return (
         <div data-lw-kind="hr" style={{ display: "flow-root", paddingBottom: pt(ctx.spaceAfter) }}>
@@ -275,7 +280,7 @@ function ImageView({ block }: { block: ImageBlock }) {
   );
 }
 
-function ChartPlaceholder({ block }: { block: ChartBlock }) {
+function ChartView({ block }: { block: ChartBlock }) {
   const ctx = useContext(RenderCtx);
   const maxPx = ctx.contentWidth * PX_PER_PT;
   const width = Math.min(
@@ -283,33 +288,9 @@ function ChartPlaceholder({ block }: { block: ChartBlock }) {
     num(block.widthPx, typeof block.width === "number" && block.width > 0 ? (maxPx * Math.min(100, block.width)) / 100 : maxPx),
   );
   const height = num(block.heightPx, width * 0.6);
-  const option = (block.option ?? {}) as { title?: unknown };
-  const title =
-    typeof option.title === "string"
-      ? option.title
-      : option.title && typeof (option.title as { text?: unknown }).text === "string"
-        ? ((option.title as { text: string }).text)
-        : typeof block.alt === "string"
-          ? block.alt
-          : "";
   return (
     <div data-lw-kind="chart" style={{ display: "flow-root", paddingBottom: pt(ctx.spaceAfter) }}>
-      <div
-        data-lw-chart-placeholder=""
-        style={{
-          width,
-          height,
-          border: "0.75pt dashed #9CA3AF",
-          color: "#6B7280",
-          fontSize: pt(9),
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxSizing: "border-box",
-        }}
-      >
-        {title ? `Chart: ${title}` : "Chart"}
-      </div>
+      <ChartBox block={block} width={width} height={height} measuring={ctx.measuring} renderChart={ctx.renderChart} />
     </div>
   );
 }

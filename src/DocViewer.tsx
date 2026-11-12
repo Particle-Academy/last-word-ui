@@ -18,6 +18,7 @@ import {
   hasBand,
   type RenderContext,
 } from "./render";
+import type { RenderChart } from "./chart";
 import { carlitoUrls } from "./font-urls";
 import { carlitoFaces, fontFaceCss } from "./fonts";
 import { DEFAULT_SIZE, DEFAULT_SPACE_AFTER, FOOTNOTE_SEPARATOR_PT, num, pt, px, typography as typographyStyle } from "./style";
@@ -103,6 +104,14 @@ export interface DocViewerProps {
    * `@particle-academy/last-word-ui/styles.css` instead.
    */
   injectStyles?: boolean;
+  /**
+   * Draws a chart block instead of the default, given the block, its option laid
+   * out for a page, and its size in CSS px. Return `undefined` to leave a chart
+   * to the default. The default draws with `@particle-academy/fancy-echarts`'
+   * `EChart` when it is installed (an optional peer) and a sized placeholder
+   * when it is not.
+   */
+  renderChart?: RenderChart;
   id?: string;
   className?: string;
   style?: CSSProperties;
@@ -144,6 +153,7 @@ export function DocViewer({
   now,
   onLayout,
   injectStyles = true,
+  renderChart,
   id,
   className,
   style,
@@ -197,8 +207,9 @@ export function DocViewer({
       size: num(doc?.defaultSize, DEFAULT_SIZE),
       spaceAfter: DEFAULT_SPACE_AFTER,
       contentWidth: geometry.contentWidth,
+      ...(renderChart ? { renderChart } : {}),
     }),
-    [numbering, doc, geometry],
+    [numbering, doc, geometry, renderChart],
   );
   // The context a stretch's blocks render in: the same marks, its own text width.
   const ctxOf = (k: number): RenderContext => ({ ...ctx, contentWidth: stretches[k]!.geometry.contentWidth });
@@ -339,7 +350,7 @@ export function DocViewer({
                 const at = k === 0 ? `${kind}:${slot}` : `${k + 1}:${kind}:${slot}`;
                 return (
                   <div key={at} data-lw-measure-band={at} style={stretches.length > 1 ? { width: pt(stretch.geometry.contentWidth) } : undefined}>
-                    <RenderCtx.Provider value={{ ...ctxOf(k), fields: { ...docFields, section: k + 1, page: n, pages: n } }}>
+                    <RenderCtx.Provider value={{ ...ctxOf(k), measuring: true, fields: { ...docFields, section: k + 1, page: n, pages: n } }}>
                       <BandView band={band} />
                     </RenderCtx.Provider>
                   </div>
@@ -355,7 +366,7 @@ export function DocViewer({
                 data-lw-measure-block={i}
                 style={{ display: "flow-root", ...(stretches.length > 1 ? { width: pt(stretches[k]!.geometry.contentWidth) } : {}) }}
               >
-                <RenderCtx.Provider value={ctxOf(k)}>
+                <RenderCtx.Provider value={{ ...ctxOf(k), measuring: true }}>
                   <BlockView block={b} />
                 </RenderCtx.Provider>
               </div>
@@ -365,7 +376,7 @@ export function DocViewer({
             const k = noteStretch.get(n.id) ?? 0;
             return (
               <div key={n.id} data-lw-measure-footnote={n.id} style={stretches.length > 1 ? { width: pt(stretches[k]!.geometry.contentWidth) } : undefined}>
-                <RenderCtx.Provider value={ctxOf(k)}>
+                <RenderCtx.Provider value={{ ...ctxOf(k), measuring: true }}>
                   <FootnoteView id={n.id} footnote={n.footnote} />
                 </RenderCtx.Provider>
               </div>

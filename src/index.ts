@@ -1,5 +1,7 @@
 export { DocViewer, FONT_LOAD_TIMEOUT_MS } from "./DocViewer";
 export type { DocViewerProps, DocViewerLayout, ViewerFont } from "./DocViewer";
+export { pageChartOption, OFFICE_PALETTE } from "./chart";
+export type { ChartRenderArgs, RenderChart } from "./chart";
 export { CARLITO_FAMILY, CARLITO_FACES, carlitoFaces, fontFaceCss } from "./fonts";
 export { docFromReader } from "./from-reader";
 export { LAYOUT_NOTICE, unshownLayout } from "./layout-notice";

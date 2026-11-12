@@ -53,7 +53,34 @@ so a deep clone between numbering and render would lose the marks.
 | `now` | `Date \| string` | first render | the moment `{date}` / `{time}` show; an ISO string is fine |
 | `onLayout` | `(l) => void` | | `{ pages, pageWidth, pageHeight, scale, font }`, JSON; see *Fonts* |
 | `injectStyles` | `boolean` | `true` | see *Styles* |
+| `renderChart` | `(chart) => ReactNode \| undefined` | | draws a chart block instead of the default; see *Charts* |
 | `id`, `className`, `style` | | | on the root |
+
+### Charts
+
+A chart block (last-word's native Word charts: column, bar, line, pie) is drawn
+by `EChart` from `@particle-academy/fancy-echarts`, an optional peer, at the
+block's size inside the page. Install it to draw charts:
+
+```bash
+npm install @particle-academy/fancy-echarts echarts
+```
+
+It is loaded on first use, in the browser only, so a document with no charts
+never loads a charting engine and server rendering draws the empty, sized box.
+The sheet is white paper in every colour scheme, so the chart is drawn in a
+light theme with a transparent background, as SVG (sharp at any scale and in
+print), with animation off. `pageChartOption(option)` is that option, and the
+block's own keys win.
+
+Without fancy-echarts, each chart is a sized, labelled placeholder, so the
+page breaks where it would with the chart, and a development warning says so.
+
+`renderChart` replaces the default for any chart: it gets
+`{ block, option, width, height, title }` (size in CSS px at 100%) and returns
+what to draw at exactly that size, or `undefined` to leave that chart to the
+default. Chart blocks carry `data-lw-chart`; a placeholder carries
+`data-lw-chart-placeholder`.
 
 ### Stable handles
 
@@ -146,11 +173,10 @@ unmodified under the SIL Open Font License 1.1 (`fonts/OFL.txt`, `fonts/NOTICE`)
   vertical alignment, spans), paragraph alignment, shading, borders, indents
   and spacing, run styling (bold, italic, underline, strike, colour, highlight,
   size, font, small caps, letter spacing, inline code, links), headings,
-  lists, quotes, code, images and rules.
+  lists, quotes, code, images, charts (see *Charts*) and rules.
 
 ### Not yet (v0)
 
-- Charts draw as a sized, labelled placeholder, so pagination stays right.
 - A table **row** taller than a page is not split. It is placed alone and
   flagged with `data-lw-overflow`.
 - A block with no line breaks that is taller than a page (a huge image) is cut
