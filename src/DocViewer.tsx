@@ -303,6 +303,7 @@ export function DocViewer({
       data-lw-viewer=""
       data-lw-pages={(ready && pageCount) || undefined}
       data-lw-font={ready ? font : undefined}
+      aria-busy={ready ? undefined : true}
       className={className}
       style={{ position: "relative", ...style }}
     >
@@ -389,6 +390,20 @@ export function DocViewer({
           )}
         </RenderCtx.Provider>
       </div>
+
+      {/* Until the first layout: one blank sheet at the first page's drawn size, so
+          the viewer has a box (and the page does not jump) while the font loads. */}
+      {!ready && (
+        <div
+          data-lw-pending=""
+          style={{
+            width: px(stretches[0]!.geometry.width * PX_PER_PT * scale),
+            maxWidth: "100%",
+            height: px(stretches[0]!.geometry.height * PX_PER_PT * scale),
+            margin: "0 auto",
+          }}
+        />
+      )}
 
       {ready && layout && (
         <div data-lw-page-stack="" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap }}>

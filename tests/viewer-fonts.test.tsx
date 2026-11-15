@@ -56,6 +56,33 @@ describe("DocViewer and the bundled font", () => {
     expect(host.querySelector("[data-lw-viewer]")!.getAttribute("data-lw-font")).toBe("carlito");
   });
 
+  it("keeps a page-sized box while it waits, so the viewer never has no box", async () => {
+    // Before this, the root held only the offscreen measuring copy (absolute)
+    // until the font loaded and layout ran: a 0-height box for up to
+    // FONT_LOAD_TIMEOUT_MS, which a kit-site inspector caught at 375 and 768 px
+    // (lab runs 746, 748) and which shifts the page when the sheets arrive.
+    const { settle } = fakeFonts();
+    act(() => root.render(<DocViewer doc={doc} />));
+
+    const viewer = host.querySelector("[data-lw-viewer]")!;
+    const placeholder = host.querySelector<HTMLElement>("[data-lw-pending]");
+    expect(pages()).toBe(0);
+    expect(placeholder).not.toBeNull();
+    expect(placeholder!.parentElement).toBe(viewer);
+    expect(parseFloat(placeholder!.style.height)).toBeGreaterThan(0);
+    expect(parseFloat(placeholder!.style.width)).toBeGreaterThan(0);
+    expect(placeholder!.style.position).not.toBe("absolute");
+    expect(viewer.getAttribute("aria-busy")).toBe("true");
+
+    await act(async () => {
+      settle.resolve([{}]);
+      await Promise.resolve();
+    });
+    expect(pages()).toBe(1);
+    expect(host.querySelector("[data-lw-pending]")).toBeNull();
+    expect(viewer.hasAttribute("aria-busy")).toBe(false);
+  });
+
   it("lays out with the fallback, and SAYS so, when the font cannot load", async () => {
     const { settle } = fakeFonts();
     const onLayout = vi.fn<(l: DocViewerLayout) => void>();
