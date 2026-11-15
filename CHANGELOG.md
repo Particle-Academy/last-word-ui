@@ -10,18 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- **The viewer has a box while it lays out.** Until the font loaded and the
-  first layout ran (up to `FONT_LOAD_TIMEOUT_MS`, 3 s), `DocViewer`'s root held
-  only the offscreen measuring copy, so it was 0 px high: the page jumped when
-  the sheets arrived, and a kit-site inspector measuring early saw a viewer
-  with no box at all. It now draws one blank sheet (`data-lw-pending`) at the
-  first page's scaled size and marks the root `aria-busy="true"` until the
-  pages replace it. Measuring, page breaks and `onLayout` are unchanged.
-  Nothing to do; if you style the viewer, `[data-lw-pending]` is the new handle.
-
-## [0.6.0] - 2026-11-11
+## [0.6.0] - 2026-11-15
 
 **What you must do:** to see charts drawn, install the optional peer:
 `npm install @particle-academy/fancy-echarts echarts`. Without it nothing
@@ -40,6 +29,14 @@ same size as before.
   from the OS and draws light text on the white page), a transparent
   background, the SVG renderer (sharp under the page scale and in print) and no
   animation. The block's own keys win over each default.
+- **The viewer has a box while it lays out.** Until the font loaded and the
+  first layout ran (up to `FONT_LOAD_TIMEOUT_MS`, 3 s), `DocViewer`'s root held
+  only the offscreen measuring copy, so it was 0 px high: the page jumped when
+  the sheets arrived, and a kit-site inspector measuring early saw a viewer
+  with no box at all. It now draws one blank sheet (`data-lw-pending`) at the
+  first page's scaled size and marks the root `aria-busy="true"` until the
+  pages replace it. Measuring, page breaks and `onLayout` are unchanged.
+  Nothing to do; if you style the viewer, `[data-lw-pending]` is the new handle.
 
 ### Added
 
