@@ -10,6 +10,13 @@ reflows the text.
 > **Pre-1.0:** breaking changes land in MINOR releases. Read the
 > [CHANGELOG](./CHANGELOG.md) entry before taking one.
 
+<!-- fancy-agents-note:start -->
+> **For agents.** This package is listed on the Fancy MCP catalog server at
+> `https://ui.particle.academy/mcp` (streamable HTTP, no API key; MCP id `fancy-ui`),
+> with install commands and docs, alongside the rest of the kit. How an agent
+> installs and uses this package is in [AGENTS.md](https://github.com/Particle-Academy/last-word-ui/blob/main/AGENTS.md).
+<!-- fancy-agents-note:end -->
+
 ## Install
 
 ```bash
@@ -200,14 +207,6 @@ It takes heights in and returns page assignments, with no DOM. Use it with
 `pageGeometry(doc)`, `pageMargins(doc)` (the one place margin defaults are
 applied), `bodyBox()`, `numberFootnotes(doc)` and `substituteFields()` to lay
 pages out elsewhere.
-
-## Develop
-
-```bash
-npm test        # vitest + jsdom
-npm run lint    # tsc + eslint
-npm run demo    # vite demo: a multi-page memo, wide and narrow
-```
 
 ## License
 
