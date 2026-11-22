@@ -1,3 +1,4 @@
+import { isDeletedRun } from "./revisions";
 import type { Block, Doc, Footnote, ListItem, Run } from "./types";
 
 export interface FootnoteNumbering {
@@ -23,7 +24,8 @@ export function numberFootnotes(doc: Doc): FootnoteNumbering {
     if (!Array.isArray(list)) return;
     for (const run of list as Run[]) {
       const fn = run?.footnote;
-      if (fn && typeof fn === "object" && Array.isArray(fn.blocks)) {
+      // A deleted reference mark is not drawn (render.tsx), so its note is not numbered either.
+      if (fn && !isDeletedRun(run) && typeof fn === "object" && Array.isArray(fn.blocks)) {
         const id = notes.length + 1;
         marks.set(run, id);
         notes.push({ id, footnote: fn });

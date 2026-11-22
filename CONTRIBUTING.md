@@ -28,6 +28,7 @@ geometry.ts     paper sizes, pageMargins() (THE place defaults live), bodyBox()
 stretches.ts    runs of pages of one setup (pageBreak.page): their geometry, and what the packer is given
 bands.ts        which header/footer each page draws (default / first / even), body box per page class
 layout-notice.ts page settings set where they don't apply (a nested page, near-miss keys, sections), and the notice's words
+revisions.ts    tracked-changes FAIL-SAFE: find `revision` keys, which runs are deleted text (unreadable = deleted)
 fields.ts       band field tokens and the Word date-time picture formatter (pure)
 footnotes.ts    numbering, keyed by Run identity
 table-grid.ts   HTML-style spans -> grid columns, joinPrevious, header rows

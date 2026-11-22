@@ -4,6 +4,7 @@ import { ChartBox, type RenderChart } from "./chart";
 import { substituteFields, type PageFields } from "./fields";
 import { resolveImageSize } from "./image-size";
 import { safeHref } from "./links";
+import { isDeletedRun } from "./revisions";
 import { PX_PER_PT } from "./geometry";
 import {
   BAND_COLOR,
@@ -80,6 +81,8 @@ export function WithContext({ value, children }: { value: Partial<RenderContext>
 
 function RunView({ run }: { run: Run }) {
   const ctx = useContext(RenderCtx);
+  // Tracked-changes fail-safe: deleted or moved-away text is never drawn as live text.
+  if (isDeletedRun(run)) return null;
   const mark = ctx.marks.get(run);
   let text = typeof run.text === "string" ? run.text : "";
   if (ctx.fields) text = substituteFields(text, ctx.fields);
@@ -133,7 +136,9 @@ function RunView({ run }: { run: Run }) {
 
 export function Runs({ runs }: { runs: unknown }) {
   const list = Array.isArray(runs) ? (runs as Run[]) : [];
-  const visible = list.some((r) => (typeof r?.text === "string" && r.text !== "") || r?.footnote);
+  const visible = list.some(
+    (r) => !!r && typeof r === "object" && !isDeletedRun(r) && ((typeof r.text === "string" && r.text !== "") || !!r.footnote),
+  );
   return (
     <>
       {list.map((run, i) => (run && typeof run === "object" ? <RunView key={i} run={run} /> : null))}

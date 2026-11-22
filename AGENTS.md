@@ -42,7 +42,7 @@ found with `search-backend-packages`.
   page, `data-block` (`b0`, `b1`, ...) per block or fragment, `data-footnote`,
   `data-lw-band` / `data-lw-band-variant`, `data-lw-rows`,
   `data-lw-repeated-header`, `data-lw-chart`, `data-lw-chart-placeholder`,
-  `data-lw-font`.
+  `data-lw-font`, `data-lw-tracked-changes` / `data-lw-tracked-changes-notice`.
 - **Lower level:** `paginate()`, `pageGeometry()`, `pageMargins()`,
   `bodyBox()`, `numberFootnotes()`, `substituteFields()` lay pages out without
   the DOM.
@@ -61,6 +61,13 @@ found with `search-backend-packages`.
   Carlito). Other fonts draw as installed on the machine.
 - **Nothing is drawn until the font loads**, up to `FONT_LOAD_TIMEOUT_MS`
   (3 s).
+- **Tracked changes are not shown, and that is a fail-safe.** A `doc` carrying any
+  `revision` key draws with a notice (`data-lw-tracked-changes-notice`), deleted and
+  moved-away runs (`delete`, `moveFrom`, or a revision it cannot read) are hidden,
+  and inserted text draws as normal text. Check `hasRevisions(doc)` (or `onLayout`'s
+  `revisions`) before showing a document, and have the person accept or reject the
+  changes first. The viewer never edits the model, so the revisions survive for
+  whatever writes the file back.
 - **Not yet handled:** a table row taller than a page (`data-lw-overflow`), an
   unbreakable block taller than a page (`data-lw-forced`), a footnote that does
   not fit, page backgrounds and border frames.

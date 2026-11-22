@@ -10,6 +10,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Fail-safe: a document with tracked changes no longer draws deleted text as live
+  text.** last-word's model is gaining tracked-changes authoring: a `revision` key on
+  runs (`insert`, `delete`, `moveFrom`, `moveTo`, `format`), on paragraph and heading
+  blocks and on list items. This viewer cannot show revisions, and before this it drew
+  them as if they were not there, so deleted text read as part of the document. Now,
+  when a `doc` carries any `revision`: a run that was deleted or moved away
+  (`delete`, `moveFrom`) is not drawn, on the pages or in the measuring copy, and its
+  footnote is not numbered; inserted, moved-here and reformatted text draws as
+  before; a block-level mark keeps its text. A notice above the pages says so
+  (`TRACKED_CHANGES_NOTICE`, handle `data-lw-tracked-changes-notice` with
+  `data-lw-revisions`, the count), and the root gains `data-lw-tracked-changes`. A
+  `revision` this viewer cannot read counts as deleted: hiding text under a notice is
+  recoverable, showing deleted text as live is not. The viewer never changes the
+  model: the revisions are still there for the host to write back. This is a guard,
+  not support; there is no review UI. New exports: `hasRevisions(doc)`,
+  `revisionPaths(doc)` (JSON Pointers) and `isDeletedRun(run)`; `onLayout` gains
+  `revisions` (the same pointers), absent when there are none. A document without
+  revisions draws exactly as before; nothing to do.
+
 ### Changed
 
 - **CI: the lab-certificate gate verifies against the lab's rotated key list.**

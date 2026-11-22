@@ -4,6 +4,7 @@ import { BAND_SLOTS, bandSlot, pageBand, pageClassIn, slotBand, type BandKind, t
 import { resolveNow, type PageFields } from "./fields";
 import { numberFootnotes, type FootnoteNumbering } from "./footnotes";
 import { LAYOUT_NOTICE, unshownLayout } from "./layout-notice";
+import { TRACKED_CHANGES_NOTICE, revisionPaths } from "./revisions";
 import { PX_PER_PT, type BodyBox, type PageGeometry } from "./geometry";
 import { blockId, measure } from "./measure";
 import { paginate, type Fragment, type PageLayout } from "./paginate";
@@ -49,6 +50,12 @@ export interface DocViewerLayout {
    * Absent when there is none. The visible notice says the same thing.
    */
   notShown?: string[];
+  /**
+   * JSON Pointers to the document's `revision` keys (tracked changes), which this
+   * viewer does not show: deleted and moved-away text is hidden and a notice says so.
+   * Absent when there are none.
+   */
+  revisions?: string[];
 }
 
 export type ViewerFont = "carlito" | "fallback" | "unused";
@@ -134,7 +141,10 @@ interface Layout {
  * (1-based); each block or fragment of one `data-block` (`b0`, `b1`, ... in
  * document order); each footnote `data-footnote`; bands `data-lw-band`, with
  * `data-lw-band-variant` naming the one drawn (`default`, `first`, `even`);
- * `data-lw-layout-notice` when the document asks for page layout it does not show.
+ * `data-lw-layout-notice` when the document asks for page layout it does not show;
+ * `data-lw-tracked-changes` on the root and `data-lw-tracked-changes-notice` (with
+ * `data-lw-revisions`, the count) when it carries tracked changes, which it does not
+ * show either: deleted and moved-away text is hidden (a fail-safe, see revisions.ts).
  * A `pageBreak` carrying `page` changes the page from there on, each page drawn and
  * its text measured at its own size.
  *
@@ -275,6 +285,7 @@ export function DocViewer({
         : Math.min(maxScale, width / pageWpx);
 
   const notShown = useMemo(() => unshownLayout(doc), [doc]);
+  const revisions = useMemo(() => revisionPaths(doc), [doc]);
 
   const pageCount = layout?.pages.length ?? 0;
   useEffect(() => {
@@ -289,9 +300,10 @@ export function DocViewer({
         scale,
         font,
         ...(notShown.length > 0 ? { notShown } : {}),
+        ...(revisions.length > 0 ? { revisions } : {}),
       });
     }
-  }, [layout, geometry, stretches, scale, onLayout, font, notShown]);
+  }, [layout, geometry, stretches, scale, onLayout, font, notShown, revisions]);
 
   const typography: CSSProperties = typographyStyle(doc?.defaultFont, ctx.size);
   const ready = layout !== null && font !== "pending";
@@ -303,6 +315,7 @@ export function DocViewer({
       data-lw-viewer=""
       data-lw-pages={(ready && pageCount) || undefined}
       data-lw-font={ready ? font : undefined}
+      data-lw-tracked-changes={revisions.length > 0 ? "" : undefined}
       aria-busy={ready ? undefined : true}
       className={className}
       style={{ position: "relative", ...style }}
@@ -322,6 +335,13 @@ export function DocViewer({
       {notShown.length > 0 && (
         <div data-lw-layout-notice="" style={{ marginBottom: gap }}>
           <Callout color="amber">{LAYOUT_NOTICE}</Callout>
+        </div>
+      )}
+
+      {/* Tracked-changes fail-safe. Outside the measuring copy and the sheets too. */}
+      {revisions.length > 0 && (
+        <div data-lw-tracked-changes-notice="" data-lw-revisions={revisions.length} style={{ marginBottom: gap }}>
+          <Callout color="amber">{TRACKED_CHANGES_NOTICE}</Callout>
         </div>
       )}
 

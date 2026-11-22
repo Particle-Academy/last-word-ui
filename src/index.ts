@@ -5,6 +5,7 @@ export type { ChartRenderArgs, RenderChart } from "./chart";
 export { CARLITO_FAMILY, CARLITO_FACES, carlitoFaces, fontFaceCss } from "./fonts";
 export { docFromReader } from "./from-reader";
 export { LAYOUT_NOTICE, unshownLayout } from "./layout-notice";
+export { TRACKED_CHANGES_NOTICE, hasRevisions, isDeletedRun, revisionPaths } from "./revisions";
 export { paginate, pageCapacity } from "./paginate";
 export { docStretches, blockStretches, packInput } from "./stretches";
 export type { Stretch, PackInput } from "./stretches";
