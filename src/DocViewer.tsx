@@ -20,6 +20,7 @@ import {
   type RenderContext,
 } from "./render";
 import type { RenderChart } from "./chart";
+import type { RenderSignField } from "./sign-fields";
 import { carlitoUrls } from "./font-urls";
 import { carlitoFaces, fontFaceCss } from "./fonts";
 import { DEFAULT_SIZE, DEFAULT_SPACE_AFTER, FOOTNOTE_SEPARATOR_PT, num, pt, px, typography as typographyStyle } from "./style";
@@ -119,6 +120,15 @@ export interface DocViewerProps {
    * when it is not.
    */
   renderChart?: RenderChart;
+  /**
+   * Fills a signing field's box (`signatureField`, `initialsField`,
+   * `dateSignedField`: fine-print's signing extension) with the host's own
+   * control, e.g. a signing ceremony's field. Return `undefined` for the bare
+   * box. The box keeps fine-print's size whatever it holds, and the hidden
+   * measuring copy never calls this, so a control appears once and moves no
+   * page break. Each box carries `data-lw-field` (its id).
+   */
+  renderField?: RenderSignField;
   id?: string;
   className?: string;
   style?: CSSProperties;
@@ -164,6 +174,7 @@ export function DocViewer({
   onLayout,
   injectStyles = true,
   renderChart,
+  renderField,
   id,
   className,
   style,
@@ -218,8 +229,9 @@ export function DocViewer({
       spaceAfter: DEFAULT_SPACE_AFTER,
       contentWidth: geometry.contentWidth,
       ...(renderChart ? { renderChart } : {}),
+      ...(renderField ? { renderField } : {}),
     }),
-    [numbering, doc, geometry, renderChart],
+    [numbering, doc, geometry, renderChart, renderField],
   );
   // The context a stretch's blocks render in: the same marks, its own text width.
   const ctxOf = (k: number): RenderContext => ({ ...ctx, contentWidth: stretches[k]!.geometry.contentWidth });

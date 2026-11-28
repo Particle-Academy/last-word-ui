@@ -5,6 +5,7 @@ import { substituteFields, type PageFields } from "./fields";
 import { resolveImageSize } from "./image-size";
 import { safeHref } from "./links";
 import { isDeletedRun } from "./revisions";
+import { SignFieldBox, signField, type RenderSignField } from "./sign-fields";
 import { PX_PER_PT } from "./geometry";
 import {
   BAND_COLOR,
@@ -60,6 +61,8 @@ export interface RenderContext {
   measuring?: boolean;
   /** DocViewer's `renderChart`. */
   renderChart?: RenderChart;
+  /** DocViewer's `renderField`: fills a signing field's box on the drawn pages. */
+  renderField?: RenderSignField;
 }
 
 const EMPTY_MARKS = new Map<Run, number>();
@@ -223,6 +226,15 @@ export function BlockView({ block }: { block: Block }) {
       );
     case "pageBreak":
       return null;
+    case "signatureField":
+    case "initialsField":
+    case "dateSignedField": {
+      // Body content only, as in fine-print: a band (ctx.fields is set) draws none.
+      const field = ctx.fields ? null : signField(block);
+      if (!field) return null;
+      const content = !ctx.measuring && ctx.renderField ? ctx.renderField(field) : undefined;
+      return <SignFieldBox field={field} content={content} />;
+    }
     default:
       return null;
   }

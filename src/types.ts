@@ -179,6 +179,23 @@ export interface HrBlock {
   type: "hr";
 }
 
+/**
+ * A signing field: fine-print's signing extension (`Signable` writer), not
+ * part of last-word's shared schema. The viewer draws its box at fine-print's
+ * size and lets a host fill it (`DocViewer`'s `renderField`).
+ */
+export interface SignFieldBlock {
+  type: "signatureField" | "initialsField" | "dateSignedField";
+  /** `^[A-Za-z0-9_-]{1,64}$`, unique in the document. */
+  id: string;
+  /** Who signs it, same pattern. */
+  signer: string;
+  /** Default true. */
+  required?: boolean;
+  /** Drawn under the box. Default per kind; `""` draws none. */
+  label?: string;
+}
+
 export type Block =
   | HeadingBlock
   | ParagraphBlock
@@ -189,7 +206,8 @@ export type Block =
   | ImageBlock
   | ChartBlock
   | PageBreakBlock
-  | HrBlock;
+  | HrBlock
+  | SignFieldBlock;
 
 /** A one-line running band: left / centre / right, as Word's two tab stops lay it. */
 export interface Band {

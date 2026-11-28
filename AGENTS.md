@@ -34,8 +34,15 @@ found with `search-backend-packages`.
   `<DocViewer doc={doc} />`. `docFromReader()` takes a reader result or a JSON
   string.
 - **Props:** `doc`, `fit` (`"width" | "none"`), `scale`, `maxScale`, `gap`,
-  `filename`, `now`, `onLayout`, `injectStyles`, `renderChart`, `id`,
-  `className`, `style`. The full table is in the [README](./README.md).
+  `filename`, `now`, `onLayout`, `injectStyles`, `renderChart`, `renderField`,
+  `id`, `className`, `style`. The full table is in the [README](./README.md).
+- **Signing fields:** a Doc may carry fine-print's signing nodes
+  (`{ type: "signatureField" | "initialsField" | "dateSignedField", id, signer,
+  required?, label? }`). Each draws as a box at fine-print's size
+  (`SIGN_FIELD_SIZES`) with `data-lw-field="<id>"`. `renderField(field)` fills
+  the box with your control (for a fancy-sign-ui data-mode ceremony, return
+  `ctx.renderField(field.id)`); return `undefined` for the bare box. Body only:
+  a field in a header or footer is not drawn.
 - **`onLayout`** reports `{ pages, pageWidth, pageHeight, scale, font }` as
   JSON; `font` is `"carlito"` (deterministic), `"fallback"` or `"unused"`.
 - **Stable handles:** `data-lw-viewer` on the root, `data-page` (1-based) per

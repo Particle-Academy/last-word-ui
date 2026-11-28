@@ -61,6 +61,7 @@ so a deep clone between numbering and render would lose the marks.
 | `onLayout` | `(l) => void` | | `{ pages, pageWidth, pageHeight, scale, font }`, JSON; see *Fonts* |
 | `injectStyles` | `boolean` | `true` | see *Styles* |
 | `renderChart` | `(chart) => ReactNode \| undefined` | | draws a chart block instead of the default; see *Charts* |
+| `renderField` | `(field) => ReactNode \| undefined` | | fills a signing field's box (`signatureField`, `initialsField`, `dateSignedField`) with your own control, e.g. a signing ceremony's field |
 | `id`, `className`, `style` | | | on the root |
 
 ### Charts

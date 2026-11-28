@@ -10,6 +10,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Signing fields on the page.** `DocViewer` draws fine-print's signing
+  extension nodes, `signatureField`, `initialsField` and `dateSignedField`, as
+  boxes at fine-print's sizes (`SIGN_FIELD_SIZES`: 216 x 40, 72 x 28 and
+  144 x 18 points, never wider than their column), with the rule under the box
+  and the label below it (the default per kind, the node's own, or none for
+  `""`). New prop `renderField(field)` fills a box with the host's own control,
+  which is how a signing ceremony (fancy-sign-ui's data mode, `ctx.renderField`)
+  puts the signer's fields where they print. It is called for the drawn pages
+  only, never the hidden measuring copy, so a control appears once, and the box
+  is the same size either way, so a control moves no page break. Handles:
+  `data-lw-field` (the id), `data-lw-field-kind`, `data-lw-field-signer`,
+  `data-lw-field-required`, `data-lw-field-area`, `data-lw-field-label`. As in
+  fine-print, a malformed node (an id or signer outside `^[A-Za-z0-9_-]{1,64}$`)
+  and a field in a header or footer draw nothing. Types: `SignFieldBlock` joins
+  `Block`; `DocSignField`, `RenderSignField`, `SignFieldKind`.
+  **Nothing to do** for a document without these nodes: they are not in
+  last-word's shared schema, so no existing Doc carries one, and last-word's
+  `layout()` agreement fixtures are unchanged.
+
 ## [0.7.0] - 2026-11-22
 
 ### Added
